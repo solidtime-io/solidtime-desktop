@@ -1,4 +1,4 @@
-import { createApiClient } from '@solidtime/api/dist/openapi.json.client'
+import { createApiClient } from '@solidtime/api'
 import { computed } from 'vue'
 import { accessToken, endpoint } from './oauth'
 

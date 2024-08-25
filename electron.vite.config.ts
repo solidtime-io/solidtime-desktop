@@ -30,10 +30,6 @@ export default defineConfig({
         resolve: {
             alias: {
                 '@renderer': resolve('src/renderer/src'),
-                '@': resolve('../solidtime/resources/js'),
-                '@api': resolve('../solidtime/resources/js/packages/api/src'),
-                '@utils': resolve('../solidtime/resources/js/packages/ui/src/utils'),
-                '@ui': resolve('../solidtime/resources/js/packages/ui/src'),
             },
         },
         plugins: [vue()],

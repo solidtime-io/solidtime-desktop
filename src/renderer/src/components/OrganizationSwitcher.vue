@@ -3,7 +3,7 @@ import { SelectDropdown, Badge } from '@solidtime/ui'
 import { computed } from 'vue'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { ChevronDownIcon } from '@heroicons/vue/20/solid'
-import { type MyMembership } from '../../../../../solidtime/resources/js/packages/api'
+import { type MyMembership } from '@solidtime/api'
 const { memberships } = useMyMemberships()
 const currentOrganization = computed(() => {
     return memberships.value?.find((membership) => membership.id === currentMembershipId.value)
