@@ -11,7 +11,14 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
 
     steps:
       - name: Check out Git repository
@@ -29,7 +36,7 @@ jobs:
         run: npm run build
 
       - name: Prepare for app notarization
-        if: startsWith(matrix.os, 'macos')
+        if: ${{ matrix.platform == 'mac' }}
         # Import Apple API key for app notarization on macOS
         run: |
           mkdir -p ~/private_keys/
