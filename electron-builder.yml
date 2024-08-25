@@ -36,7 +36,7 @@ linux:
     target:
         - AppImage
         - deb
-    maintainer: electronjs.org
+    maintainer: solidtime.io
     category: Utility
 appImage:
     artifactName: ${name}-${version}.${ext}
