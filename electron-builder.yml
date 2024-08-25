@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: io.solidtime.desktop
 productName: solidtime
 directories:
     buildResources: build
