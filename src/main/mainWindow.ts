@@ -9,7 +9,7 @@ export function initializeMainWindow(icon: string) {
         height: 600,
         show: false,
         backgroundColor: '#0f1011',
-        titleBarStyle: 'hidden',
+        titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
         autoHideMenuBar: true,
         ...(process.platform === 'linux' ? { icon } : {}),
         webPreferences: {
