@@ -29,10 +29,10 @@ export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) 
     })
 
     getAutoUpdater().addListener('update-downloaded', () => {
-      app.emit('before-quit');
-      setTimeout(() => {
-        getAutoUpdater().quitAndInstall()
-      }, 500);
+        app.emit('before-quit')
+        setTimeout(() => {
+            getAutoUpdater().quitAndInstall()
+        }, 500)
     })
 
     getAutoUpdater().addListener('error', (error) => {
