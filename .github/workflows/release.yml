@@ -30,6 +30,14 @@ jobs:
               uses: samuelmeuli/action-snapcraft@v2
               if: ${{ matrix.platform != 'windows' }}
 
+            - name: Set up Homebrew
+              if: matrix.platform == 'mac'
+              uses: Homebrew/actions/setup-homebrew@master
+
+            - name: Install Homebrew Bundler RubyGems
+              if: matrix.platform == 'mac'
+              run: brew install multipass
+
             - name: Install Node.js
               uses: actions/setup-node@v3
               with:
