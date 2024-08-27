@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/solidtime_empty@4x.png?asset'
+import icon from '../../resources/linux_icon.png?asset'
 import { initializeAutoUpdater, registerAutoUpdateListeners } from './autoUpdater'
 import { initializeTray, registerTrayListeners } from './tray'
 import { initializeMainWindow, registerMainWindowListeners } from './mainWindow'

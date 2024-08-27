@@ -1,6 +1,6 @@
 {
     "name": "solidtime",
-    "version": "0.0.13",
+    "version": "0.0.20",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
     "author": "solidtime.io",
@@ -8,6 +8,7 @@
     "type": "module",
     "scripts": {
         "format": "prettier --write .",
+        "format:check": "prettier --check .",
         "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
         "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
         "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
@@ -32,7 +33,7 @@
         "@electron-toolkit/utils": "^3.0.0",
         "@sentry/electron": "^5.3.0",
         "@solidtime/api": "^0.0.3",
-        "@solidtime/ui": "^0.0.7",
+        "@solidtime/ui": "^0.0.8",
         "electron-updater": "^6.1.7"
     },
     "devDependencies": {

@@ -1,7 +1,6 @@
 import { computed, ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { showMainWindow } from './window'
-import { currentMembershipId } from './myMemberships'
 
 const challenge = ref('')
 const state = ref('')
@@ -97,7 +96,6 @@ export async function initializeAuth() {
 }
 
 export async function logout() {
-    currentMembershipId.value = null
     accessToken.value = ''
     window.localStorage.removeItem('refresh_token')
     window.localStorage.removeItem('verifier')

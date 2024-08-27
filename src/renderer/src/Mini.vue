@@ -51,14 +51,14 @@ const projects = computed(() => {
 })
 
 const shownDescription = computed(() => {
-    if (isRunning.value && currentTimeEntry.value.description !== '') {
-        return currentTimeEntry.value.description
-    } else if (!isRunning.value && lastTimeEntry.value.description !== '') {
-        return lastTimeEntry.value.description
+    if (isRunning.value) {
+        return currentTimeEntry.value.description !== '' ? currentTimeEntry.value.description : currentTask.value?.name
+    } else if (!isRunning.value) {
+        return lastTimeEntry.value.description !== '' ? lastTimeEntry.value.description : currentTask.value?.name
     }
-    return 'No Description'
+    return null
 })
-const shownTask = computed(() => {
+const currentTask = computed(() => {
     if (isRunning.value) {
         return tasks.value?.find((task) => task.id === currentTimeEntry.value.task_id)
     } else {
@@ -142,7 +142,7 @@ const currentTimer = computed(() => {
                         <ChevronRightIcon class="w-4 shrink-0 text-muted"></ChevronRightIcon>
                         <span
                             class="truncate shrink text-muted opacity-50 hover:opacity-100 transition-opacity min-w-0"
-                            >{{ shownTask?.name ?? shownDescription }}</span
+                            >{{ shownDescription ?? 'No Description' }}</span
                         >
                     </div>
                 </div>

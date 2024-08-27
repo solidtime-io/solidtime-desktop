@@ -72,7 +72,7 @@ function triggerUpdate() {
             <div class="my-4 text-sm text-muted flex flex-col justify-center">
                 <label class="flex items-center">
                     <Checkbox v-model:checked="isWidgetActivated" name="remember" />
-                    <span class="ms-2 text-sm text-gray-600 dark:text-gray-400"
+                    <span class="ms-2 text-sm"
                         >Show Timetracker Widget</span
                     >
                 </label>

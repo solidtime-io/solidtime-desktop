@@ -1,12 +1,20 @@
-# solidtime-electron
+# solidtime desktop
 
-An Electron application with Vue and TypeScript
+Desktop Application for Solidtime - The modern open-source time-tracker for macOS, Windows and Linux.
 
-## Recommended IDE Setup
+**This client is currently in alpha, if you run into any problems please open an issue.**
 
--   [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin)
+You can find the latest versions [here](https://github.com/solidtime-io/solidtime-desktop/releases)
 
-## Project Setup
+Additionally you can install the app via
+
+<a href="https://snapcraft.io/solidtime">
+  <img alt="Get it from the Snap Store" src="https://snapcraft.io/static/images/badges/en/snap-store-white.svg" />
+</a>
+
+## Development Setup
+
+**We do not accept any external contributions at the moment as this project is still in an early stage.**
 
 ### Install
 
