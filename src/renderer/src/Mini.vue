@@ -93,6 +93,7 @@ function onToggleButtonPress(newState: boolean) {
     if (newState) {
         sendEventToWindow('main', 'startTimer')
     } else {
+        showMainWindow()
         sendEventToWindow('main', 'stopTimer')
     }
 }

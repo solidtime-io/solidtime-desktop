@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Modal, PrimaryButton, SecondaryButton, Checkbox } from '@solidtime/ui'
-
-const emit = defineEmits(['close'])
-import { endpoint, logout } from '../utils/oauth.ts'
+import { logout } from '../utils/oauth.ts'
 import { isWidgetActivated } from '../utils/widget.ts'
 import { useQuery } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
 import { computed } from 'vue'
+
+const emit = defineEmits(['close'])
 
 const { data } = useQuery({
     queryKey: ['me'],
@@ -39,7 +39,7 @@ function onLogoutClick() {
     logout()
 }
 function triggerUpdate() {
-    window.electronAPI.updateAutoUpdater(`${endpoint.value}/desktop-version/`)
+    window.electronAPI.updateAutoUpdater()
 }
 </script>
 

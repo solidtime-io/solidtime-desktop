@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { type Component, computed, onMounted, watch, watchEffect } from 'vue'
+import { type Component, computed, nextTick, onMounted, watch, watchEffect } from 'vue'
 
 import {
     TimeEntryGroupedTable,
@@ -182,9 +182,10 @@ function startTimer() {
 }
 
 async function stopTimer() {
-    await timeEntryStop.mutateAsync({ ...currentTimeEntry.value, end: dayjs().utc().format() })
-    stopLiveTimer()
+    const stoppedTimeEntry = { ...currentTimeEntry.value }
     currentTimeEntry.value = { ...emptyTimeEntry }
+    stopLiveTimer()
+    timeEntryStop.mutate({ ...stoppedTimeEntry, end: dayjs().utc().format() })
 }
 
 onMounted(async () => {
@@ -200,11 +201,14 @@ onMounted(async () => {
         startLiveTimer()
     })
     await listenForBackendEvent('stopTimer', () => {
-        stopTimer()
+        nextTick(() => {
+            stopTimer()
+        })
     })
 })
 
 const projectCreateMutation = useProjectCreateMutation()
+
 async function createProject(project: CreateProjectBody): Promise<Project | undefined> {
     // validate createProjectBody
     try {
@@ -228,6 +232,7 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
 }
 
 const clientCreateMutation = useClientCreateMutation()
+
 async function createClient(client: CreateClientBody) {
     const response = await clientCreateMutation.mutateAsync(client)
     return response['data']

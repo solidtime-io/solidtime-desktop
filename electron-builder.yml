@@ -41,7 +41,6 @@ linux:
     target:
         - deb
         - snap
-        - AppImage
         - tar.gz
         - rpm
     desktop: # Define desktop elem

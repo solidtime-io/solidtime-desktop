@@ -18,8 +18,9 @@ export function initializeMainWindow(icon: string) {
         },
     })
 
-    app.on('did-become-active', () => {
+    app.on('activate', () => {
         mainWindow.show()
+        mainWindow.focus()
     })
 
     let forcequit = false

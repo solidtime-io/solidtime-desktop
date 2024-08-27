@@ -15,24 +15,13 @@ export function getAutoUpdater(): AppUpdater {
 export function initializeAutoUpdater() {
     getAutoUpdater().autoDownload = false
     getAutoUpdater().autoInstallOnAppQuit = false
-    getAutoUpdater().forceDevUpdateConfig = true
     getAutoUpdater().allowDowngrade = true
-    getAutoUpdater().setFeedURL({
-        provider: 'generic',
-        url: 'https://app.solidtime.io/desktop-version/',
-        channel: 'latest',
-    })
 }
 
 export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) {
-    ipcMain.on('updateAutoUpdater', (_, url) => {
-        getAutoUpdater().setFeedURL({
-            provider: 'generic',
-            url: url,
-            channel: 'latest',
-        })
+    ipcMain.on('updateAutoUpdater', () => {
         // force dev update config
-        getAutoUpdater().checkForUpdates()
+        getAutoUpdater().checkForUpdatesAndNotify()
     })
 
     getAutoUpdater().addListener('update-available', () => {

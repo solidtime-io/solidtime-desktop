@@ -26,7 +26,7 @@ if (process.contextIsolated || true) {
             onAutoUpdaterError: (callback) =>
                 ipcRenderer.on('updateError', (_event, value) => callback(value)),
             updateTrayState: (timeEntry: string) => ipcRenderer.send('updateTrayState', timeEntry),
-            updateAutoUpdater: (url: string) => ipcRenderer.send('updateAutoUpdater', url),
+            updateAutoUpdater: () => ipcRenderer.send('updateAutoUpdater'),
         })
     } catch (error) {
         console.error(error)

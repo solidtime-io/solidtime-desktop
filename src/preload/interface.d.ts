@@ -13,7 +13,7 @@ export interface IElectronAPI {
     onStartTimer: (callback: () => void) => void
     onStopTimer: (callback: () => void) => void
     updateTrayState: (timeEntry: string) => void
-    updateAutoUpdater: (url: string) => void
+    updateAutoUpdater: () => void
 }
 
 declare global {

@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { endpoint } from '../utils/oauth'
 import { PrimaryButton, SecondaryButton, LoadingSpinner } from '@solidtime/ui'
 
 const showUpdateAvailableOverlay = ref(false)
 const autoUpdateErrorMessage = ref<string | null>(null)
 
 onMounted(() => {
-    window.electronAPI.updateAutoUpdater(`${endpoint.value}/desktop-version/`)
     window.electronAPI.onUpdateAvailable(() => {
         showUpdateAvailableOverlay.value = true
     })
@@ -15,6 +13,7 @@ onMounted(() => {
         autoUpdateErrorMessage.value =
             error ?? 'An error occurred while checking for updates. Please try again later.'
     })
+    window.electronAPI.updateAutoUpdater()
 })
 
 function triggerUpdate() {
