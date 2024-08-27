@@ -8,15 +8,16 @@ import {
     TimeTrackerRunningInDifferentOrganizationOverlay,
 } from '@solidtime/ui'
 import {
-  emptyTimeEntry,
-  getAllTimeEntries,
-  getCurrentTimeEntry,
-  useTimeEntryCreateMutation,
-  useTimeEntryDeleteMutation,
-  useTimeEntryStopMutation,
-  useCurrentTimeEntryUpdateMutation,
-  useTimeEntriesUpdateMutation, useTimeEntryUpdateMutation
-} from "../utils/timeEntries.ts";
+    emptyTimeEntry,
+    getAllTimeEntries,
+    getCurrentTimeEntry,
+    useTimeEntryCreateMutation,
+    useTimeEntryDeleteMutation,
+    useTimeEntryStopMutation,
+    useCurrentTimeEntryUpdateMutation,
+    useTimeEntriesUpdateMutation,
+    useTimeEntryUpdateMutation,
+} from '../utils/timeEntries.ts'
 import { getAllProjects, useProjectCreateMutation } from '../utils/projects.ts'
 import { getAllTasks } from '../utils/tasks.ts'
 import type {
@@ -306,7 +307,9 @@ const currency = 'EUR'
                     :createClient
                     :currency="currency"
                     :updateTimeEntry="
-                        (arg: TimeEntry) =>{ timeEntryUpdate.mutate(arg) }
+                        (arg: TimeEntry) => {
+                            timeEntryUpdate.mutate(arg)
+                        }
                     "
                     :updateTimeEntries="
                         (ids: string[], changes: Partial<TimeEntry>) =>

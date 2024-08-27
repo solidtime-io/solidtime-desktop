@@ -1,6 +1,6 @@
 {
     "name": "solidtime",
-    "version": "0.0.20",
+    "version": "0.0.21",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
     "author": "solidtime.io",
@@ -23,10 +23,10 @@
         "build:linux": "npm run build && electron-builder --linux"
     },
     "build:": {
-      "afterSign": "electron-builder-notarize",
-      "mac": {
-        "hardenedRuntime": true
-      }
+        "afterSign": "electron-builder-notarize",
+        "mac": {
+            "hardenedRuntime": true
+        }
     },
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.0",

@@ -25,10 +25,10 @@ nsis:
 mac:
     entitlementsInherit: build/entitlements.mac.plist
     target:
-      target: default
-      arch:
-        - x64
-        - arm64
+        target: default
+        arch:
+            - x64
+            - arm64
     extendInfo:
         - NSCameraUsageDescription: Application requests access to the device's camera.
         - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
@@ -44,15 +44,14 @@ linux:
         - AppImage
         - tar.gz
         - rpm
-        - flatpak
     desktop: # Define desktop elem
-      name: solidtime
-      exec: solidtime %U
-      MimeType: x-scheme-handler/solidtime
+        name: solidtime
+        exec: solidtime %U
+        MimeType: x-scheme-handler/solidtime
     maintainer: solidtime.io
     category: Utility
     mimeTypes:
-      - x-scheme-handler/solidtime
+        - x-scheme-handler/solidtime
 appImage:
     artifactName: ${name}-${version}.${ext}
 npmRebuild: false

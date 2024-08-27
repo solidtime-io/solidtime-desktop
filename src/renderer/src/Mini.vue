@@ -52,9 +52,13 @@ const projects = computed(() => {
 
 const shownDescription = computed(() => {
     if (isRunning.value) {
-        return currentTimeEntry.value.description !== '' ? currentTimeEntry.value.description : currentTask.value?.name
+        return currentTimeEntry.value.description !== ''
+            ? currentTimeEntry.value.description
+            : currentTask.value?.name
     } else if (!isRunning.value) {
-        return lastTimeEntry.value.description !== '' ? lastTimeEntry.value.description : currentTask.value?.name
+        return lastTimeEntry.value.description !== ''
+            ? lastTimeEntry.value.description
+            : currentTask.value?.name
     }
     return null
 })

@@ -8,9 +8,6 @@ declare global {
         getWeekStartSetting: () => string
         __TAURI__: Record<string, unknown>
     }
-
-    // temporary fix for ts import error in notification.ts
-    let route: any
 }
 
 import { onMounted, ref, watchEffect } from 'vue'

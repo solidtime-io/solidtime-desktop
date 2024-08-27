@@ -7,6 +7,7 @@ const api = {}
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
+// eslint-disable-next-line no-constant-condition
 if (process.contextIsolated || true) {
     try {
         contextBridge.exposeInMainWorld('electron', electronAPI)
