@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import type { AppUpdater } from 'electron-updater'
 import electronUpdater from 'electron-updater'
 import log from 'electron-log'
@@ -29,7 +29,10 @@ export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) 
     })
 
     getAutoUpdater().addListener('update-downloaded', () => {
+      app.emit('before-quit');
+      setTimeout(() => {
         getAutoUpdater().quitAndInstall()
+      }, 500);
     })
 
     getAutoUpdater().addListener('error', (error) => {

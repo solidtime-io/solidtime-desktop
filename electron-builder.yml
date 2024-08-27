@@ -18,7 +18,7 @@ protocols:
 win:
     executableName: solidtime
 nsis:
-    artifactName: ${name}-${version}-setup.${ext}
+    artifactName: ${name}-setup.${ext}
     shortcutName: ${productName}
     uninstallDisplayName: ${productName}
     createDesktopShortcut: always
@@ -36,7 +36,7 @@ mac:
         - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
     notarize: true
 dmg:
-    artifactName: ${name}-${version}-${arch}.${ext}
+    artifactName: ${name}-${arch}.${ext}
 linux:
     target:
         - deb
@@ -52,7 +52,7 @@ linux:
     mimeTypes:
         - x-scheme-handler/solidtime
 appImage:
-    artifactName: ${name}-${version}.${ext}
+    artifactName: ${name}.${ext}
 npmRebuild: false
 publish:
     provider: github
