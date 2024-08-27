@@ -4,6 +4,12 @@ Desktop Application for Solidtime - The modern open-source time-tracker for macO
 
 **This client is currently in alpha, if you run into any problems please open an issue.**
 
+Download the latest versions:
+
+-   mac OS (Silicon): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-arm64.dmg)
+-   mac OS (Intel): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-x64.dmg)
+-   Windows: [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-setup.exe)
+
 You can find the latest versions [here](https://github.com/solidtime-io/solidtime-desktop/releases)
 
 Additionally you can install the app via

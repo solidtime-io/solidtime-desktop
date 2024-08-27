@@ -22,6 +22,8 @@ nsis:
     shortcutName: ${productName}
     uninstallDisplayName: ${productName}
     createDesktopShortcut: always
+snap:
+    grade: stable
 mac:
     entitlementsInherit: build/entitlements.mac.plist
     target:
@@ -38,9 +40,16 @@ mac:
 dmg:
     artifactName: ${name}-${arch}.${ext}
 linux:
+    artifactName: ${name}-${arch}.${ext}
     target:
-        - deb
-        - snap
+        - target: deb
+          arch:
+              - x64
+              - arm64
+        - target: snap
+          arch:
+              - x64
+              - arm64
         - tar.gz
         - rpm
     desktop: # Define desktop elem
