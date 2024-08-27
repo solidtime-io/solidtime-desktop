@@ -1,14 +1,32 @@
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
     main: {
-        plugins: [externalizeDepsPlugin()],
-    },
-    preload: {
-        plugins: [externalizeDepsPlugin()],
         build: {
+            sourcemap: true,
+        },
+        plugins: [
+            externalizeDepsPlugin(),
+            sentryVitePlugin({
+                org: 'solidtime',
+                project: 'desktop',
+            }),
+        ],
+    },
+
+    preload: {
+        plugins: [
+            externalizeDepsPlugin(),
+            sentryVitePlugin({
+                org: 'solidtime',
+                project: 'desktop',
+            }),
+        ],
+        build: {
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     index: resolve(__dirname, 'src/preload/index.ts'),
@@ -18,8 +36,10 @@ export default defineConfig({
             },
         },
     },
+
     renderer: {
         build: {
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     main: resolve(__dirname, 'src/renderer/index.html'),
@@ -32,6 +52,12 @@ export default defineConfig({
                 '@renderer': resolve('src/renderer/src'),
             },
         },
-        plugins: [vue()],
+        plugins: [
+            vue(),
+            sentryVitePlugin({
+                org: 'solidtime',
+                project: 'desktop',
+            }),
+        ],
     },
 })
