@@ -36,7 +36,7 @@ mac:
         - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
     notarize: true
 dmg:
-    artifactName: ${name}-${version}.${ext}
+    artifactName: ${name}-${version}-${arch}.${ext}
 linux:
     target:
         - deb
