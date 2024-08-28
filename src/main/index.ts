@@ -11,6 +11,11 @@ import { registerVueDevTools } from './devtools'
 import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+    app.quit()
+}
+
 initializeAutoUpdater()
 
 Sentry.init({
@@ -37,8 +42,10 @@ function createWindow(): void {
     const miniWindow = initializeMiniWindow(icon)
     registerMiniWindowListeners(miniWindow)
 
-    const tray = initializeTray(mainWindow)
-    registerTrayListeners(tray, mainWindow)
+    if (process.platform !== 'linux') {
+        const tray = initializeTray(mainWindow)
+        registerTrayListeners(tray, mainWindow)
+    }
 
     // HMR for renderer base on electron-vite cli.
     // Load the remote URL for development or the local html file for production.
