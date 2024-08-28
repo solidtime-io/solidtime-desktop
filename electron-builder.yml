@@ -39,6 +39,7 @@ dmg:
     artifactName: ${name}-${arch}.${ext}
 linux:
     artifactName: ${name}-${arch}.${ext}
+    icon: build/icon.icns
     target:
         - target: deb
           arch:
