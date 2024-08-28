@@ -25,11 +25,12 @@ export function initializeMainWindow(icon: string) {
 
     let forcequit = false
     mainWindow.on('close', (event) => {
-        if (forcequit === false && process.platform === 'darwin') {
-            event.preventDefault()
-            mainWindow.hide()
-        }
-        if (process.platform === 'linux') {
+        if (process.platform === 'darwin') {
+            if (forcequit === false) {
+                event.preventDefault()
+                mainWindow.hide()
+            }
+        } else {
             app.quit()
         }
     })
