@@ -40,10 +40,19 @@ dmg:
 linux:
     artifactName: ${name}-${arch}.${ext}
     target:
-        - deb
-        - snap
-        - tar.gz
-        - rpm
+        - target: deb
+          arch:
+              - x64
+              - arm64
+        - target: snap
+        - target: tar.gz
+          arch:
+              - x64
+              - arm64
+        - target: rpm
+          arch:
+              - x64
+              - arm64
     desktop: # Define desktop elem
         name: solidtime
         exec: solidtime %U

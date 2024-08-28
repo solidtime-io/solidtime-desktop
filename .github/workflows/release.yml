@@ -4,7 +4,6 @@ on:
     push:
         tags:
             - 'v*.*.*'
-
 jobs:
     release:
         runs-on: ${{ matrix.os }}
@@ -28,15 +27,7 @@ jobs:
 
             - name: Install Snapcraft
               uses: samuelmeuli/action-snapcraft@v2
-              if: ${{ matrix.platform != 'windows' }}
-
-            - name: Set up Homebrew
-              if: matrix.platform == 'mac'
-              uses: Homebrew/actions/setup-homebrew@master
-
-            - name: Install Homebrew Bundler RubyGems
-              if: matrix.platform == 'mac'
-              run: brew install multipass
+              if: ${{ matrix.platform == 'linux' }}
 
             - name: Install Node.js
               uses: actions/setup-node@v3
@@ -60,7 +51,7 @@ jobs:
               if: ${{ matrix.platform == 'mac' }}
               run: |
                   echo "$API_KEY" > apple.p8
-                  npx electron-builder --mac --linux --publish always
+                  npx electron-builder --${{ matrix.platform }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   CSC_LINK: ${{ secrets.MAC_CERTS }}
