@@ -55,3 +55,19 @@ $ npm run build:mac
 # For Linux
 $ npm run build:linux
 ```
+
+
+## Contributing
+
+This project is in a very early stage. The structure and APIs are still subject to change and not stable.
+Therefore, we do not currently accept any contributions, unless you are a member of the team.
+
+As soon as we feel comfortable enough that the application structure is stable enough, we will open up the project for contributions.
+
+## Security
+
+Looking to report a vulnerability? Please refer our [SECURITY.md](./SECURITY.md) file.
+
+## License
+
+This project is open-source and available under the GNU Affero General Public License v3.0 (AGPL v3). Please see the [license file](LICENSE.md) for more information.
