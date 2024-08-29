@@ -7,8 +7,8 @@
     "homepage": "https://solidtime.io",
     "type": "module",
     "scripts": {
-        "format": "prettier --write .",
-        "format:check": "prettier --check .",
+        "format": "prettier --write './**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts,vue}'",
+        "format:check": "prettier --check './**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts,vue}'",
         "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
         "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
         "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
