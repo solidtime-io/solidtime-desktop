@@ -104,30 +104,3 @@ export async function logout() {
 export async function openLoginWindow() {
     await open(loginUrl.value)
 }
-
-export async function refreshToken() {
-    // const refreshToken = window.localStorage.getItem('refresh_token');
-    //
-    // if(refreshToken){
-    //     const data = {
-    //         grant_type: 'refresh_token',
-    //         client_id: clientId.value,
-    //         refresh_token: refreshToken
-    //     };
-    //
-    //     const body = Body.form(data)
-    //     const response = await fetch<{
-    //         access_token: string,
-    //         refresh_token: string
-    //     }>(endpoint.value + '/oauth/token', {
-    //         method: 'POST',
-    //         headers: {
-    //             'Content-Type': 'application/x-www-form-urlencoded'
-    //         },
-    //         body: body
-    //     })
-    //
-    //     window.localStorage.setItem('access_token', response.data.access_token);
-    //     window.localStorage.setItem('refresh_token', response.data.refresh_token);
-    // }
-}

@@ -2,10 +2,10 @@
 
 <img width="1600" alt="Solidtime Desktop App Demo" src="https://github.com/user-attachments/assets/5b1f801c-bbd6-4b93-9d4a-8c229466403e">
 
-
 Desktop Application for Solidtime - The modern open-source time-tracker for macOS, Windows and Linux.
 
-**This client is currently in alpha, if you run into any problems please open an issue.**
+> [!WARNING]
+> This client is currently in beta, if you run into any problems please open an issue.
 
 Download the latest versions:
 
