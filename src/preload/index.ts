@@ -20,6 +20,7 @@ if (process.contextIsolated || true) {
             startTimer: () => ipcRenderer.send('startTimer'),
             stopTimer: () => ipcRenderer.send('stopTimer'),
             updateAvailable: () => ipcRenderer.send('updateAvailable'),
+            updateNotAvailable: () => ipcRenderer.send('updateNotAvailable'),
         })
     } catch (error) {
         console.error(error)

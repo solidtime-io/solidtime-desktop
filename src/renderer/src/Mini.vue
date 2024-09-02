@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { computed, watch, watchEffect } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { emptyTimeEntry } from './utils/timeEntries.ts'
 import { useStorage } from '@vueuse/core'
 import { getAllProjects } from './utils/projects.ts'
@@ -17,25 +17,37 @@ import { showMainWindow } from './utils/window.ts'
 
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
 const { currentOrganizationId } = useMyMemberships()
-const currentOrganizationLoaded = computed(() => !!currentOrganizationId)
+
+const isRunning = computed(
+    () => currentTimeEntry.value.start !== '' && currentTimeEntry.value.start !== null
+)
+
+const organizationIdToLoad = computed(() => {
+    if (currentTimeEntry.value.organization_id && currentTimeEntry.value.organization_id !== '') {
+        return currentTimeEntry.value.organization_id
+    }
+    return currentOrganizationId.value
+})
+
+const currentOrganizationLoaded = computed(() => !!organizationIdToLoad.value)
 
 const currentTimeEntry = useStorage('currentTimeEntry', { ...emptyTimeEntry })
 const { data: projectsResponse } = useQuery({
-    queryKey: ['projects', currentOrganizationId],
-    queryFn: () => getAllProjects(currentOrganizationId.value),
-    enabled: currentOrganizationLoaded.value,
+    queryKey: ['projects', organizationIdToLoad],
+    queryFn: () => getAllProjects(organizationIdToLoad.value),
+    enabled: currentOrganizationLoaded,
 })
 
 const { data: tasksResponse } = useQuery({
-    queryKey: ['tasks', currentOrganizationId],
-    queryFn: () => getAllTasks(currentOrganizationId.value),
-    enabled: currentOrganizationLoaded.value,
+    queryKey: ['tasks', organizationIdToLoad],
+    queryFn: () => getAllTasks(organizationIdToLoad.value),
+    enabled: currentOrganizationLoaded,
 })
 
 const { data: currentTimeEntryTasksResponse } = useQuery({
     queryKey: ['tasks', currentTimeEntry.value.organization_id],
     queryFn: () => getAllTasks(currentTimeEntry.value.organization_id),
-    enabled: currentOrganizationLoaded.value,
+    enabled: currentOrganizationLoaded,
 })
 
 const lastTimeEntry = useStorage('lastTimeEntry', { ...emptyTimeEntry })
@@ -77,9 +89,45 @@ const shownProject = computed(() => {
     }
 })
 
-const isRunning = computed(
-    () => currentTimeEntry.value.start !== '' && currentTimeEntry.value.start !== null
-)
+const queryClient = useQueryClient()
+
+// invalidate queries if we encounter projects or tasks that are not in the store
+// because stores are currently not synced between mini and main window
+// (future, currentlyexperimental: https://tanstack.com/query/latest/docs/framework/vue/plugins/createPersister)
+watch(currentTimeEntry, () => {
+    console.log('currentTimeEntry changed')
+    if (
+        currentTimeEntry.value.project_id &&
+        projects.value &&
+        !projects.value.some((project) => project.id === currentTimeEntry.value.project_id)
+    ) {
+        console.log('project invalidate')
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+    }
+    if (
+        currentTimeEntry.value.task_id &&
+        tasks.value &&
+        !tasks.value.some((task) => task.id === currentTimeEntry.value.task_id)
+    ) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    }
+})
+watch(lastTimeEntry, () => {
+    if (
+        lastTimeEntry.value.project_id &&
+        projects.value &&
+        !projects.value.some((project) => project.id === lastTimeEntry.value.project_id)
+    ) {
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+    }
+    if (
+        lastTimeEntry.value.task_id &&
+        tasks.value &&
+        !tasks.value.some((task) => task.id === lastTimeEntry.value.task_id)
+    ) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    }
+})
 
 watchEffect(() => {
     if (isRunning.value) {
@@ -116,10 +164,9 @@ const currentTimer = computed(() => {
     <div v-if="!isLoggedIn" @click="focusMainWindow">Log in with solidtime</div>
     <div
         v-else
-        class="h-screen w-screen border-border-secondary border bg-primary rounded-[10px] text-white py-1 flex items-center cursor-default justify-between select-none"
-        data-tauri-drag-region>
-        <div class="text-sm text-muted flex items-center flex-1 min-w-0" data-tauri-drag-region>
-            <div class="pl-1 pr-1" data-tauri-drag-region style="-webkit-app-region: drag">
+        class="h-screen relative w-screen border-border-secondary border bg-primary rounded-[10px] text-white py-1 flex items-center cursor-default justify-between select-none">
+        <div class="text-sm text-muted flex items-center relative flex-1 min-w-0">
+            <div class="pl-1 pr-1 z-20 relative block" style="-webkit-app-region: drag">
                 <svg
                     class="h-5"
                     viewBox="0 0 25 25"
@@ -152,11 +199,12 @@ const currentTimer = computed(() => {
                     </div>
                 </div>
             </div>
+            <div class="flex-1 h-6 w-full" style="-webkit-app-region: drag"></div>
         </div>
         <div class="pr-1 flex items-center space-x-1">
             <div
                 class="text-xs font-semibold text-muted px-2 w-[65px] text-left"
-                data-tauri-drag-region>
+                style="-webkit-app-region: drag">
                 {{ currentTimer }}
             </div>
             <TimeTrackerStartStop

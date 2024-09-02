@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Modal, PrimaryButton, SecondaryButton, Checkbox } from '@solidtime/ui'
+import { Modal, PrimaryButton, SecondaryButton, Checkbox, LoadingSpinner } from '@solidtime/ui'
 import { logout } from '../utils/oauth.ts'
 import { isWidgetActivated } from '../utils/widget.ts'
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const emit = defineEmits(['close'])
 
@@ -13,6 +13,9 @@ const { data } = useQuery({
     queryFn: () => getMe(),
 })
 
+const showUpdateNotAvailable = ref(false)
+const checkingForUpdate = ref(false)
+const showErrorOnUpdateRequest = ref(false)
 const myData = computed(() => data.value?.data)
 
 defineProps({
@@ -33,14 +36,33 @@ defineProps({
 const close = () => {
     emit('close')
 }
-
+const queryClient = useQueryClient()
 function onLogoutClick() {
     emit('close')
-    logout()
+    logout(queryClient)
 }
 function triggerUpdate() {
+    checkingForUpdate.value = true
     window.electronAPI.updateAutoUpdater()
 }
+onMounted(() => {
+    window.electronAPI.onUpdateNotAvailable(() => {
+        showUpdateNotAvailable.value = true
+        checkingForUpdate.value = false
+        setTimeout(() => {
+            showUpdateNotAvailable.value = false
+        }, 5000)
+    })
+    window.electronAPI.onAutoUpdaterError(async (_) => {
+        showUpdateNotAvailable.value = true
+        showErrorOnUpdateRequest.value = true
+        checkingForUpdate.value = false
+        setTimeout(() => {
+            showUpdateNotAvailable.value = false
+            showErrorOnUpdateRequest.value = false
+        }, 5000)
+    })
+})
 </script>
 
 <template>
@@ -76,7 +98,20 @@ function triggerUpdate() {
                 </label>
             </div>
             <div class="mb-2 mt-6 font-medium text-muted" role="heading">Updates</div>
-            <SecondaryButton @click="triggerUpdate">Check for updates</SecondaryButton>
+            <div class="flex items-center space-x-4">
+                <SecondaryButton :disabled="checkingForUpdate" @click="triggerUpdate">
+                    <div class="flex items-center">
+                        <LoadingSpinner v-if="checkingForUpdate"></LoadingSpinner>
+                        <span>Check for updates</span>
+                    </div>
+                </SecondaryButton>
+                <div class="flex text-sm text-text-primary" v-if="showUpdateNotAvailable">
+                    No update available.
+                    <span v-if="showErrorOnUpdateRequest"
+                        >There was an error while fetching the update.</span
+                    >
+                </div>
+            </div>
         </div>
 
         <div

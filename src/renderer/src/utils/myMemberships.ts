@@ -35,6 +35,12 @@ export function useMyMemberships() {
     watch(memberships, () => {
         if (currentMembershipId.value === null) {
             currentMembershipId.value = memberships.value?.[0]?.id
+        } else if (
+            !memberships.value.some(
+                (membership: MyMembership) => membership.id === currentMembershipId.value
+            )
+        ) {
+            currentMembershipId.value = memberships.value?.[0]?.id
         }
     })
     return { query, memberships, currentOrganizationId, currentMembership }

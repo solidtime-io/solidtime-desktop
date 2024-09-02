@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 
 export function initializeMiniWindow(icon: string) {
     const miniWindow = new BrowserWindow({
@@ -32,5 +32,19 @@ export function registerMiniWindowListeners(miniWindow: BrowserWindow) {
     })
     ipcMain.on('hideMiniWindow', () => {
         miniWindow.hide()
+    })
+    let forcequit = false
+    miniWindow.on('close', (event) => {
+        if (process.platform === 'darwin') {
+            if (forcequit === false) {
+                event.preventDefault()
+                miniWindow.hide()
+            }
+        } else {
+            app.quit()
+        }
+    })
+    app.on('before-quit', () => {
+        forcequit = true
     })
 }

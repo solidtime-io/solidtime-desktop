@@ -1,6 +1,9 @@
 import { computed, ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { showMainWindow } from './window'
+import { currentMembershipId } from './myMemberships'
+import { type QueryClient } from '@tanstack/vue-query'
+import { emptyTimeEntry } from './timeEntries'
 
 const challenge = ref('')
 const state = ref('')
@@ -49,7 +52,7 @@ function createRandomString(num: number) {
     return [...Array(num)].map(() => Math.random().toString(36)[2]).join('')
 }
 
-export async function initializeAuth() {
+export async function initializeAuth(queryClient: QueryClient) {
     state.value = createRandomString(40)
     const verifier = createRandomString(128)
 
@@ -87,6 +90,10 @@ export async function initializeAuth() {
                     refresh_token: string
                 }
                 const responseData = (await response.json()) as OAuthResponse
+                currentMembershipId.value = null
+                queryClient.clear()
+                useStorage('currentTimeEntry', { ...emptyTimeEntry }).value = null
+                useStorage('lastTimeEntry', { ...emptyTimeEntry }).value = null
                 accessToken.value = responseData.access_token
                 window.localStorage.setItem('refresh_token', responseData.refresh_token)
                 showMainWindow()
@@ -95,7 +102,10 @@ export async function initializeAuth() {
     })
 }
 
-export async function logout() {
+export async function logout(queryClient: QueryClient) {
+    queryClient.clear()
+    useStorage('currentTimeEntry', { ...emptyTimeEntry }).value = null
+    useStorage('lastTimeEntry', { ...emptyTimeEntry }).value = null
     accessToken.value = ''
     window.localStorage.removeItem('refresh_token')
     window.localStorage.removeItem('verifier')

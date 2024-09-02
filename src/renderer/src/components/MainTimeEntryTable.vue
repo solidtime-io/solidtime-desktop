@@ -52,7 +52,7 @@ const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
 const { data: timeEntriesResponse } = useQuery({
     queryKey: ['timeEntries', currentOrganizationId],
     queryFn: () => getAllTimeEntries(currentOrganizationId.value, currentMembershipId.value),
-    enabled: currentOrganizationLoaded.value,
+    enabled: currentOrganizationLoaded,
 })
 const timeEntries = computed(() => timeEntriesResponse.value?.data)
 
@@ -62,7 +62,7 @@ const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError
 })
 
 const currentTimeEntry = useStorage('currentTimeEntry', { ...emptyTimeEntry })
-const lastTimeEntry = useStorage('lastTimeEntry', timeEntries.value?.[0] ?? { ...emptyTimeEntry })
+const lastTimeEntry = useStorage('lastTimeEntry', { ...emptyTimeEntry })
 
 watch(timeEntries, () => {
     if (timeEntries.value?.[0]) {
@@ -87,7 +87,7 @@ watch(currentTimeEntryResponse, () => {
 const { data: projectsResponse } = useQuery({
     queryKey: ['projects', currentOrganizationId],
     queryFn: () => getAllProjects(currentOrganizationId.value),
-    enabled: currentOrganizationLoaded.value,
+    enabled: currentOrganizationLoaded,
 })
 
 const projects = computed(() => projectsResponse.value?.data)
@@ -95,7 +95,7 @@ const projects = computed(() => projectsResponse.value?.data)
 const { data: clientsResponse } = useQuery({
     queryKey: ['clients', currentOrganizationId],
     queryFn: () => getAllClients(currentOrganizationId.value),
-    enabled: currentOrganizationLoaded.value,
+    enabled: currentOrganizationLoaded,
 })
 
 const clients = computed(() => clientsResponse.value?.data)
@@ -103,14 +103,14 @@ const clients = computed(() => clientsResponse.value?.data)
 const { data: tasksResponse } = useQuery({
     queryKey: ['tasks', currentOrganizationId],
     queryFn: () => getAllTasks(currentOrganizationId.value),
-    enabled: currentOrganizationLoaded.value,
+    enabled: currentOrganizationLoaded,
 })
 const tasks = computed(() => tasksResponse.value?.data)
 
 const { data: tagsResponse } = useQuery({
     queryKey: ['tags', currentOrganizationId],
     queryFn: () => getAllTags(currentOrganizationId.value),
-    enabled: currentOrganizationLoaded.value,
+    enabled: currentOrganizationLoaded,
 })
 const tags = computed(() => tagsResponse.value?.data)
 
@@ -183,6 +183,9 @@ function startTimer() {
 
 async function stopTimer() {
     const stoppedTimeEntry = { ...currentTimeEntry.value }
+    currentMembershipId.value = memberships.value.find(
+        (membership) => membership.organization.id === stoppedTimeEntry.organization_id
+    )?.id
     currentTimeEntry.value = { ...emptyTimeEntry }
     stopLiveTimer()
     timeEntryStop.mutate({ ...stoppedTimeEntry, end: dayjs().utc().format() })
@@ -326,6 +329,11 @@ const currency = 'EUR'
                     :createTimeEntry="createTimeEntry"
                     :createTag
                     :timeEntries="timeEntries"></TimeEntryGroupedTable>
+                <div v-if="timeEntries && timeEntries.length === 0" class="text-center pt-12">
+                    <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>
+                    <h3 class="text-white font-semibold">No time entries found</h3>
+                    <p class="pb-5 text-muted">Create your first time entry now!</p>
+                </div>
             </div>
         </div>
         <div v-else class="flex items-center justify-center h-full">

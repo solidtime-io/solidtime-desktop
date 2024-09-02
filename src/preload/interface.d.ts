@@ -5,6 +5,7 @@ export interface IElectronAPI {
     showMiniWindow: () => void
     hideMiniWindow: () => void
     onUpdateAvailable: (callback: () => void) => void
+    onUpdateNotAvailable: (callback: () => void) => void
     triggerUpdate: () => void
     startTimer: () => void
     stopTimer: () => void

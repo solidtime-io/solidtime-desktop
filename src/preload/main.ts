@@ -21,8 +21,11 @@ if (process.contextIsolated || true) {
                 ipcRenderer.on('openDeeplink', (_event, value) => callback(value)),
             showMiniWindow: () => ipcRenderer.send('showMiniWindow'),
             hideMiniWindow: () => ipcRenderer.send('hideMiniWindow'),
+            showMainWindow: () => ipcRenderer.send('showMainWindow'),
             triggerUpdate: () => ipcRenderer.send('triggerUpdate'),
             onUpdateAvailable: (callback) => ipcRenderer.on('updateAvailable', () => callback()),
+            onUpdateNotAvailable: (callback) =>
+                ipcRenderer.on('updateNotAvailable', () => callback()),
             onAutoUpdaterError: (callback) =>
                 ipcRenderer.on('updateError', (_event, value) => callback(value)),
             updateTrayState: (timeEntry: string) => ipcRenderer.send('updateTrayState', timeEntry),

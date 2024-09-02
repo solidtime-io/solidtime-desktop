@@ -21,12 +21,13 @@ import OrganizationSwitcher from './components/OrganizationSwitcher.vue'
 import SettingsModal from './components/SettingsModal.vue'
 
 import UpdateStatusBar from './components/UpdateStatusBar.vue'
+const queryClient = useQueryClient()
 
 onMounted(() => {
     window.getTimezoneSetting = () => 'Europe/Vienna'
     window.getWeekStartSetting = () => 'monday'
 
-    initializeAuth()
+    initializeAuth(queryClient)
 })
 
 watchEffect(async () => {
@@ -40,8 +41,20 @@ watchEffect(async () => {
 const showSettingsModal = ref(false)
 const showInstanceSettingsModal = ref(false)
 
+import { useMagicKeys, whenever } from '@vueuse/core'
+const keys = useMagicKeys()
+const cmdComma = keys['Cmd+,']
+whenever(cmdComma, () => {
+    if (isLoggedIn.value) {
+        showSettingsModal.value = true
+    } else {
+        showInstanceSettingsModal.value = true
+    }
+})
+
 import { VueQueryDevtools } from '@tanstack/vue-query-devtools'
 import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
+import { useQueryClient } from '@tanstack/vue-query'
 </script>
 
 <template>

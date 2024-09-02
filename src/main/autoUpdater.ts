@@ -9,6 +9,7 @@ export function getAutoUpdater(): AppUpdater {
     const { autoUpdater } = electronUpdater
     log.transports.file.level = 'debug'
     autoUpdater.logger = log
+    autoUpdater.forceDevUpdateConfig = true
     return autoUpdater
 }
 
@@ -26,6 +27,10 @@ export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) 
 
     getAutoUpdater().addListener('update-available', () => {
         mainWindow.webContents.send('updateAvailable')
+    })
+
+    getAutoUpdater().addListener('update-not-available', () => {
+        mainWindow.webContents.send('updateNotAvailable')
     })
 
     getAutoUpdater().addListener('update-downloaded', () => {
