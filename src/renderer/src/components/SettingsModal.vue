@@ -53,7 +53,7 @@ onMounted(() => {
             showUpdateNotAvailable.value = false
         }, 5000)
     })
-    window.electronAPI.onAutoUpdaterError(async (_) => {
+    window.electronAPI.onAutoUpdaterError(async () => {
         showUpdateNotAvailable.value = true
         showErrorOnUpdateRequest.value = true
         checkingForUpdate.value = false
@@ -105,7 +105,7 @@ onMounted(() => {
                         <span>Check for updates</span>
                     </div>
                 </SecondaryButton>
-                <div class="flex text-sm text-text-primary" v-if="showUpdateNotAvailable">
+                <div v-if="showUpdateNotAvailable" class="flex text-sm text-text-primary">
                     No update available.
                     <span v-if="showErrorOnUpdateRequest"
                         >There was an error while fetching the update.</span
