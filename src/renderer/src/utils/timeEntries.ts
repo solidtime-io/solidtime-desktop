@@ -277,7 +277,13 @@ export function useTimeEntryCreateMutation() {
         },
         onMutate: async (variables) => {
             await queryClient.cancelQueries({ queryKey: ['currentTimeEntry'] })
-            const optimisticTimeEntry = { data: { ...variables, id: self.crypto.randomUUID() } }
+            const optimisticTimeEntry = {
+                data: {
+                    ...variables,
+                    organization_id: currentOrganizationId.value,
+                    id: self.crypto.randomUUID(),
+                },
+            }
             queryClient.setQueryData(['currentTimeEntry'], () => optimisticTimeEntry)
             return { optimisticTimeEntry }
         },

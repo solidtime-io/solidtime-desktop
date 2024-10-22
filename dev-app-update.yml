@@ -1,3 +1,1 @@
-provider: generic
-url: https://solidtime.io/auto-updates
-updaterCacheDirName: solidtime-updater
+provider: github
