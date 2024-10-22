@@ -9,7 +9,6 @@ export function getAutoUpdater(): AppUpdater {
     const { autoUpdater } = electronUpdater
     log.transports.file.level = 'debug'
     autoUpdater.logger = log
-    autoUpdater.forceDevUpdateConfig = true
     return autoUpdater
 }
 
