@@ -98,7 +98,7 @@ const { data: clientsResponse } = useQuery({
     enabled: currentOrganizationLoaded,
 })
 
-const clients = computed(() => clientsResponse.value?.data)
+const clients = computed(() => clientsResponse.value?.data ?? [])
 
 const { data: tasksResponse } = useQuery({
     queryKey: ['tasks', currentOrganizationId],
