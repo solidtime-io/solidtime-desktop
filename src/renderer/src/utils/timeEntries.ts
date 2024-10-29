@@ -1,5 +1,10 @@
 import { apiClient } from './api.ts'
-import type { CreateTimeEntryBody, TimeEntry, TimeEntryResponse } from '@solidtime/api'
+import type {
+    CreateTimeEntryBody,
+    TimeEntry,
+    TimeEntryResponse,
+    UpdateMultipleTimeEntriesChangeset,
+} from '@solidtime/api'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useMyMemberships } from './myMemberships.ts'
 
@@ -143,6 +148,39 @@ export function useTimeEntryUpdateMutation() {
     })
 }
 
+export function useTimeEntriesDeleteMutation() {
+    const queryClient = useQueryClient()
+    const { currentOrganizationId } = useMyMemberships()
+
+    return useMutation({
+        scope: {
+            id: 'timeEntry',
+        },
+        mutationFn: (timeEntries: TimeEntry[]) => {
+            if (currentOrganizationId.value === null) {
+                throw new Error('No current organization id - create time entry')
+            }
+            const timeEntryIds = timeEntries.map((timeEntry) => {
+                if (offlineUuidStore[timeEntry.id]) {
+                    return offlineUuidStore[timeEntry.id]
+                }
+                return timeEntry.id
+            })
+            return apiClient.value.deleteTimeEntries(undefined, {
+                queries: {
+                    ids: timeEntryIds,
+                },
+                params: {
+                    organization: currentOrganizationId.value,
+                },
+            })
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['timeEntries', currentOrganizationId] })
+        },
+    })
+}
+
 export function useTimeEntriesUpdateMutation() {
     const queryClient = useQueryClient()
     const { currentOrganizationId } = useMyMemberships()
@@ -151,8 +189,7 @@ export function useTimeEntriesUpdateMutation() {
         scope: {
             id: 'timeEntry',
         },
-        mutationFn: (changes: { ids: string[]; changes: Partial<TimeEntry> }) => {
-            console.log(changes)
+        mutationFn: (changes: { ids: string[]; changes: UpdateMultipleTimeEntriesChangeset }) => {
             if (currentOrganizationId.value === null) {
                 throw new Error('No current organization id - update time entry')
             }

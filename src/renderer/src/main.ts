@@ -23,7 +23,6 @@ Sentry.init({
 
 window.addEventListener('keypress', (event) => {
     if (event.key === 'Escape') {
-        // your code
         event.preventDefault()
     }
 })

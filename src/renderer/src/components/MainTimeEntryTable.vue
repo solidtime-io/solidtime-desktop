@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { type Component, computed, nextTick, onMounted, watch, watchEffect } from 'vue'
+import { type Component, computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 
 import {
     TimeEntryGroupedTable,
     TimeTrackerControls,
     TimeTrackerRunningInDifferentOrganizationOverlay,
+    TimeEntryMassActionRow,
 } from '@solidtime/ui'
 import {
     emptyTimeEntry,
@@ -17,6 +18,7 @@ import {
     useCurrentTimeEntryUpdateMutation,
     useTimeEntriesUpdateMutation,
     useTimeEntryUpdateMutation,
+    useTimeEntriesDeleteMutation,
 } from '../utils/timeEntries.ts'
 import { getAllProjects, useProjectCreateMutation } from '../utils/projects.ts'
 import { getAllTasks } from '../utils/tasks.ts'
@@ -27,6 +29,7 @@ import type {
     Project,
     Tag,
     TimeEntry,
+    UpdateMultipleTimeEntriesChangeset,
 } from '@solidtime/api'
 import { getAllTags, useTagCreateMutation } from '../utils/tags.ts'
 import { LoadingSpinner } from '@solidtime/ui'
@@ -44,10 +47,14 @@ import { apiClient } from '../utils/api'
 import { updateTrayState } from '../utils/tray'
 import { getMe } from '../utils/me'
 
-const { currentOrganizationId } = useMyMemberships()
-const currentOrganizationLoaded = computed(() => !!currentOrganizationId)
+const { currentOrganizationId, currentMembership } = useMyMemberships()
+const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
 
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
+
+watch(currentOrganizationId, () => {
+    selectedTimeEntries.value = []
+})
 
 const { data: timeEntriesResponse } = useQuery({
     queryKey: ['timeEntries', currentOrganizationId],
@@ -61,8 +68,8 @@ const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError
     queryFn: () => getCurrentTimeEntry(),
 })
 
-const currentTimeEntry = useStorage('currentTimeEntry', { ...emptyTimeEntry })
-const lastTimeEntry = useStorage('lastTimeEntry', { ...emptyTimeEntry })
+const currentTimeEntry = useStorage<TimeEntry>('currentTimeEntry', { ...emptyTimeEntry })
+const lastTimeEntry = useStorage<TimeEntry>('lastTimeEntry', { ...emptyTimeEntry })
 
 watch(timeEntries, () => {
     if (timeEntries.value?.[0]) {
@@ -116,6 +123,7 @@ const tags = computed(() => tagsResponse.value?.data)
 
 const currentTimeEntryUpdateMutation = useCurrentTimeEntryUpdateMutation()
 const timeEntriesUpdate = useTimeEntriesUpdateMutation()
+const timeEntriesDelete = useTimeEntriesDeleteMutation()
 const timeEntryUpdate = useTimeEntryUpdateMutation()
 const timeEntryDelete = useTimeEntryDeleteMutation()
 const timeEntryCreate = useTimeEntryCreateMutation()
@@ -264,8 +272,30 @@ watch(meResponse, () => {
     }
 })
 
+const selectedTimeEntries = ref([] as TimeEntry[])
+
+function deleteSelected() {
+    timeEntriesDelete.mutate(selectedTimeEntries.value)
+    selectedTimeEntries.value = []
+}
+
+async function clearSelectionAndState() {
+    selectedTimeEntries.value = []
+}
+
 // TODO: Fix me
 const currency = 'EUR'
+
+const canCreateProjects = computed(() => {
+    if (currentMembership.value) {
+        return (
+            currentMembership.value?.role === 'admin' ||
+            currentMembership.value?.role === 'owner' ||
+            currentMembership.value?.role === 'manager'
+        )
+    }
+    return false
+})
 </script>
 
 <template>
@@ -289,6 +319,8 @@ const currency = 'EUR'
                         v-model:currentTimeEntry="currentTimeEntry"
                         v-model:liveTimer="liveTimer"
                         :tags
+                        :enableEstimatedTime="false"
+                        :canCreateProject="canCreateProjects"
                         :createProject
                         :createClient
                         :tasks
@@ -305,8 +337,33 @@ const currency = 'EUR'
                 </div>
             </div>
             <div class="overflow-y-scroll w-full flex-1">
+                <TimeEntryMassActionRow
+                    :selectedTimeEntries
+                    :deleteSelected
+                    :allSelected="selectedTimeEntries.length === timeEntries.length"
+                    :tasks
+                    :tags
+                    :currency
+                    :enableEstimatedTime="false"
+                    :canCreateProject="canCreateProjects"
+                    :projects
+                    :clients
+                    :updateTimeEntries="
+                        (args: UpdateMultipleTimeEntriesChangeset) =>
+                            timeEntriesUpdate.mutate({
+                                ids: selectedTimeEntries.map((timeEntry) => timeEntry.id),
+                                changes: args,
+                            })
+                    "
+                    :createProject
+                    :createClient
+                    :createTag
+                    @submit="clearSelectionAndState"
+                    @select-all="selectedTimeEntries = [...timeEntries]"
+                    @unselect-all="selectedTimeEntries = []"></TimeEntryMassActionRow>
                 <TimeEntryGroupedTable
                     v-if="timeEntries && projects && tasks && tags && clients"
+                    v-model:selected="selectedTimeEntries"
                     :projects
                     :tasks
                     :tags
@@ -324,7 +381,10 @@ const currency = 'EUR'
                             timeEntriesUpdate.mutate({ ids: ids, changes: changes })
                     "
                     :deleteTimeEntries="
-                        (args) => args.forEach((timeEntry) => timeEntryDelete.mutate(timeEntry))
+                        (args: TimeEntry[]) =>
+                            args.forEach((timeEntry: TimeEntry) =>
+                                timeEntryDelete.mutate(timeEntry)
+                            )
                     "
                     :createTimeEntry="createTimeEntry"
                     :createTag

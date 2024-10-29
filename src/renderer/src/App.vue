@@ -6,7 +6,6 @@ declare global {
     interface Window {
         getTimezoneSetting: () => string
         getWeekStartSetting: () => string
-        __TAURI__: Record<string, unknown>
     }
 }
 
@@ -60,7 +59,6 @@ import { useQueryClient } from '@tanstack/vue-query'
 <template>
     <VueQueryDevtools></VueQueryDevtools>
     <AutoUpdaterOverlay></AutoUpdaterOverlay>
-
     <div class="h-10 w-full border-b border-border-primary flex justify-end items-center pr-3">
         <div class="flex-1 h-full" style="-webkit-app-region: drag"></div>
         <div v-if="isLoggedIn" class="flex items-center space-x-2">
