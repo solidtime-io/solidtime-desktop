@@ -1,6 +1,6 @@
 {
     "name": "solidtime",
-    "version": "0.0.38",
+    "version": "0.0.39",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
     "author": "solidtime.io",
@@ -34,7 +34,7 @@
         "@sentry/electron": "^5.3.0",
         "@sentry/vite-plugin": "^2.22.2",
         "@solidtime/api": "^0.0.4",
-        "@solidtime/ui": "^0.0.9",
+        "@solidtime/ui": "^0.0.11",
         "electron-updater": "^6.1.7"
     },
     "devDependencies": {
