@@ -7,6 +7,8 @@ import {
     TimeTrackerControls,
     TimeTrackerRunningInDifferentOrganizationOverlay,
     TimeEntryMassActionRow,
+    TimeEntryCreateModal,
+    MoreOptionsDropdown,
 } from '@solidtime/ui'
 import {
     emptyTimeEntry,
@@ -35,7 +37,7 @@ import { getAllTags, useTagCreateMutation } from '../utils/tags.ts'
 import { LoadingSpinner } from '@solidtime/ui'
 
 import { useLiveTimer } from '../utils/liveTimer.ts'
-import { ClockIcon } from '@heroicons/vue/20/solid'
+import { ClockIcon, PlusIcon } from '@heroicons/vue/20/solid'
 import { CardTitle } from '@solidtime/ui'
 import { useStorage } from '@vueuse/core'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
@@ -135,6 +137,14 @@ function createTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
         ...timeEntry,
         member_id: currentMembershipId.value,
         end: null,
+    } as CreateTimeEntryBody
+    timeEntryCreate.mutate(updatedTimeEntry)
+}
+
+function createManualTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
+    const updatedTimeEntry = {
+        ...timeEntry,
+        member_id: currentMembershipId.value,
     } as CreateTimeEntryBody
     timeEntryCreate.mutate(updatedTimeEntry)
 }
@@ -296,6 +306,8 @@ const canCreateProjects = computed(() => {
     }
     return false
 })
+
+const showManualTimeEntryModal = ref(false)
 </script>
 
 <template>
@@ -303,37 +315,61 @@ const canCreateProjects = computed(() => {
         <div
             v-if="timeEntries && projects && tasks && tags && clients"
             class="flex flex-col h-full">
-            <div
-                class="px-4 pb-4 pt-2 border-b border-border-primary bg-primary z-10 w-full top-0 left-0">
-                <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
-                <div class="relative">
-                    <TimeTrackerRunningInDifferentOrganizationOverlay
-                        v-if="
-                            currentTimeEntry.organization_id &&
-                            currentTimeEntry.organization_id !== currentOrganizationId
-                        "
-                        @switch-organization="
-                            switchOrganization
-                        "></TimeTrackerRunningInDifferentOrganizationOverlay>
-                    <TimeTrackerControls
-                        v-model:currentTimeEntry="currentTimeEntry"
-                        v-model:liveTimer="liveTimer"
-                        :tags
+            <div class="flex">
+                <div
+                    class="pl-4 pb-4 pt-2 border-b border-border-primary bg-primary z-10 w-full top-0 left-0">
+                    <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
+                    <div class="relative">
+                        <TimeTrackerRunningInDifferentOrganizationOverlay
+                            v-if="
+                                currentTimeEntry.organization_id &&
+                                currentTimeEntry.organization_id !== currentOrganizationId
+                            "
+                            @switch-organization="
+                                switchOrganization
+                            "></TimeTrackerRunningInDifferentOrganizationOverlay>
+                        <TimeTrackerControls
+                            v-model:currentTimeEntry="currentTimeEntry"
+                            v-model:liveTimer="liveTimer"
+                            :tags
+                            :enableEstimatedTime="false"
+                            :canCreateProject="canCreateProjects"
+                            :createProject
+                            :createClient
+                            :tasks
+                            :clients
+                            :projects
+                            :createTag
+                            :isActive
+                            :currency
+                            @start-live-timer="startLiveTimer"
+                            @stop-live-timer="stopLiveTimer"
+                            @start-timer="startTimer"
+                            @stop-timer="stopTimer"
+                            @update-time-entry="updateCurrentTimeEntry"></TimeTrackerControls>
+                    </div>
+                </div>
+                <div class="flex justify-center items-center pt-8 group pr-4">
+                    <MoreOptionsDropdown label="More Time Entry Options">
+                        <button
+                            aria-label="Create Manual time entry"
+                            class="flex items-center space-x-3 rounded w-full px-3 py-2.5 text-start text-sm font-medium leading-5 text-white hover:bg-card-background-active focus:outline-none focus:bg-card-background-active transition duration-150 ease-in-out"
+                            @click="showManualTimeEntryModal = true">
+                            <PlusIcon class="w-5 text-icon-active"></PlusIcon>
+                            <span>Create Manual Time Entry</span>
+                        </button>
+                    </MoreOptionsDropdown>
+                    <TimeEntryCreateModal
+                        v-model:show="showManualTimeEntryModal"
                         :enableEstimatedTime="false"
-                        :canCreateProject="canCreateProjects"
-                        :createProject
-                        :createClient
-                        :tasks
-                        :clients
+                        :createProject="createProject"
+                        :createClient="createClient"
+                        :createTag="createTag"
+                        :createTimeEntry="createManualTimeEntry"
                         :projects
-                        :createTag
-                        :isActive
-                        :currency
-                        @start-live-timer="startLiveTimer"
-                        @stop-live-timer="stopLiveTimer"
-                        @start-timer="startTimer"
-                        @stop-timer="stopTimer"
-                        @update-time-entry="updateCurrentTimeEntry"></TimeTrackerControls>
+                        :tasks
+                        :tags
+                        :clients></TimeEntryCreateModal>
                 </div>
             </div>
             <div class="overflow-y-scroll w-full flex-1">
