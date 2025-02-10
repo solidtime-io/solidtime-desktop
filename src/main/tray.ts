@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray } from 'electron'
-import activeTrayIcon from '../../resources/solidtime_tray@4x.png?asset'
-import inactiveTrayIcon from '../../resources/solidtime_empty@4x.png?asset'
+import activeTrayIcon from '../../resources/solidtime_trayTemplate@4x.png?asset'
+import inactiveTrayIcon from '../../resources/solidtime_emptyTemplate@4x.png?asset'
 import { TimeEntry } from '@solidtime/api'
 
 function buildMenu(mainWindow: BrowserWindow, timeEntry: TimeEntry | null) {
@@ -49,6 +49,7 @@ export function initializeTray(mainWindow: Electron.BrowserWindow) {
     const tray = new Tray(nativeImage.createFromPath(inactiveTrayIcon))
     tray.setToolTip('solidtime')
     tray.setContextMenu(buildMenu(mainWindow, null))
+
     return tray
 }
 
