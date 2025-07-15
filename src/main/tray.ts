@@ -80,7 +80,9 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
             currentTrayTimeEntry = timeEntry
             const isRunning = !!(timeEntry && timeEntry.start && timeEntry.start !== '')
             tray.setImage(nativeImage.createFromPath(getIconPath(isRunning)))
-            tray.setToolTip(isRunning ? 'solidtime - Timer is running' : 'solidtime - Timer is stopped')
+            tray.setToolTip(
+                isRunning ? 'solidtime - Timer is running' : 'solidtime - Timer is stopped'
+            )
             tray.setContextMenu(buildMenu(mainWindow, timeEntry))
         }
     })
