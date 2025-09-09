@@ -216,6 +216,7 @@ onMounted(async () => {
             currentTimeEntry.value.task_id = lastTimeEntry.value.task_id
             currentTimeEntry.value.description = lastTimeEntry.value.description
             currentTimeEntry.value.tags = lastTimeEntry.value.tags
+            currentTimeEntry.value.billable = lastTimeEntry.value.billable
             currentTimeEntry.value.start = dayjs().utc().format()
         }
         createTimeEntry(currentTimeEntry.value)
