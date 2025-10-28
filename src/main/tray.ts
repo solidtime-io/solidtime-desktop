@@ -65,6 +65,8 @@ function updateTimerInterval(timeEntry: TimeEntry, tray: Tray) {
         // duration formatted to HH:MM
         const hours = Math.floor(duration.asHours()).toString().padStart(2, '0')
         const minutes = duration.minutes().toString().padStart(2, '0')
+        const formattedDuration = ` ${hours}:${minutes}`
+        tray.setTitle(formattedDuration, { fontType: 'monospacedDigit' })
     }
 }
 
@@ -79,6 +81,8 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
                     clearInterval(timerInterval)
                     timerInterval = undefined
                 }
+                tray.setTitle('')
+                updateTimerInterval(timeEntry, tray)
                 timerInterval = setInterval(() => updateTimerInterval(timeEntry, tray), 1000)
                 tray.setContextMenu(buildMenu(mainWindow, timeEntry))
             } else {
