@@ -28,7 +28,8 @@ if (process.contextIsolated || true) {
                 ipcRenderer.on('updateNotAvailable', () => callback()),
             onAutoUpdaterError: (callback) =>
                 ipcRenderer.on('updateError', (_event, value) => callback(value)),
-            updateTrayState: (timeEntry: string) => ipcRenderer.send('updateTrayState', timeEntry),
+            updateTrayState: (timeEntry: string, showTimer: boolean) =>
+                ipcRenderer.send('updateTrayState', timeEntry, showTimer),
             updateAutoUpdater: () => ipcRenderer.send('updateAutoUpdater'),
         })
     } catch (error) {

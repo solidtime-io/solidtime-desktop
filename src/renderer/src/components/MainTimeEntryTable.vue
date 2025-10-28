@@ -46,7 +46,7 @@ import { dayjs } from '../utils/dayjs.ts'
 import { listenForBackendEvent } from '../utils/events.ts'
 import { fromError } from 'zod-validation-error'
 import { apiClient } from '../utils/api'
-import { updateTrayState } from '../utils/tray'
+import { updateTrayState, isTrayTimerActivated } from '../utils/tray'
 import { getMe } from '../utils/me'
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
@@ -170,6 +170,10 @@ const isActive = computed(() => {
 })
 
 watch(currentTimeEntry, () => {
+    updateTrayState({ ...currentTimeEntry.value })
+})
+
+watch(isTrayTimerActivated, () => {
     updateTrayState({ ...currentTimeEntry.value })
 })
 
