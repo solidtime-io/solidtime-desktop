@@ -3,6 +3,8 @@ import activeTrayIcon from '../../resources/solidtime_tray@4x.png?asset'
 import inactiveTrayIcon from '../../resources/solidtime_empty@4x.png?asset'
 import { TimeEntry } from '@solidtime/api'
 import dayjs from 'dayjs'
+import duration from 'dayjs/plugin/duration'
+dayjs.extend(duration)
 
 let timerInterval: NodeJS.Timeout | undefined = undefined
 
@@ -58,16 +60,10 @@ export function initializeTray(mainWindow: Electron.BrowserWindow) {
 
 function updateTimerInterval(timeEntry: TimeEntry, tray: Tray) {
     if (timeEntry && timeEntry.start && timeEntry.start !== '') {
-        const duration = dayjs().diff(dayjs(timeEntry.start), 'second')
+        const duration = dayjs.duration(dayjs().diff(dayjs(timeEntry.start), 'second'), 's')
         // duration formatted to HH:MM
-        const hours = Math.floor(duration / 3600)
-            .toString()
-            .padStart(2, '0')
-        const minutes = Math.floor((duration % 3600) / 60)
-            .toString()
-            .padStart(2, '0')
-        const formattedDuration = `${hours}:${minutes}`
-        tray.setTitle(formattedDuration)
+        const hours = Math.floor(duration.asHours()).toString().padStart(2, '0')
+        const minutes = duration.minutes().toString().padStart(2, '0')
     }
 }
 
@@ -84,7 +80,6 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
                 }
                 timerInterval = setInterval(() => updateTimerInterval(timeEntry, tray), 1000)
                 tray.setContextMenu(buildMenu(mainWindow, timeEntry))
-                tray.setTitle('')
             } else {
                 if (timerInterval) {
                     clearInterval(timerInterval)
