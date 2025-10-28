@@ -70,7 +70,7 @@ function updateTimerInterval(timeEntry: TimeEntry, tray: Tray) {
 }
 
 export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
-    ipcMain.on('updateTrayState', (_, serializedTimeEntry: string) => {
+    ipcMain.on('updateTrayState', (_, serializedTimeEntry: string, showTimer: boolean = true) => {
         if (serializedTimeEntry) {
             const timeEntry = JSON.parse(serializedTimeEntry) as TimeEntry
             if (timeEntry && timeEntry.start && timeEntry.start !== '') {
@@ -80,9 +80,13 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
                     clearInterval(timerInterval)
                     timerInterval = undefined
                 }
-                tray.setTitle('')
-                updateTimerInterval(timeEntry, tray)
-                timerInterval = setInterval(() => updateTimerInterval(timeEntry, tray), 1000)
+                if (showTimer) {
+                    tray.setTitle('')
+                    updateTimerInterval(timeEntry, tray)
+                    timerInterval = setInterval(() => updateTimerInterval(timeEntry, tray), 1000)
+                } else {
+                    tray.setTitle('')
+                }
                 tray.setContextMenu(buildMenu(mainWindow, timeEntry))
             } else {
                 if (timerInterval) {
