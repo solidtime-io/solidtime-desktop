@@ -13,6 +13,13 @@ let timerInterval: NodeJS.Timeout | undefined = undefined
 let currentTrayTimeEntry: TimeEntry | null = null
 
 function getIconPath(active: boolean) {
+    // On macOS, template images (with 'Template' in filename) are automatically inverted by the OS
+    // So we should always use the non-inverted version on macOS
+    if (process.platform === 'darwin') {
+        return active ? activeTrayIcon : inactiveTrayIcon
+    }
+
+    // On other platforms, manually handle dark mode
     const isDarkMode = nativeTheme.shouldUseDarkColors
     if (active) {
         return isDarkMode ? activeTrayIconInverted : activeTrayIcon
