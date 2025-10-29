@@ -1,6 +1,6 @@
 {
     "name": "solidtime",
-    "version": "0.0.39",
+    "version": "0.0.40",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
     "author": "solidtime.io",
@@ -29,18 +29,18 @@
         }
     },
     "dependencies": {
-        "@electron-toolkit/preload": "^3.0.0",
-        "@electron-toolkit/utils": "^3.0.0",
+        "@electron-toolkit/preload": "^3.0.2",
+        "@electron-toolkit/utils": "^4.0.0",
         "@sentry/electron": "^5.3.0",
         "@sentry/vite-plugin": "^2.22.2",
         "@solidtime/api": "^0.0.4",
         "@solidtime/ui": "^0.0.11",
-        "electron-updater": "^6.1.7"
+        "electron-updater": "^6.6.2"
     },
     "devDependencies": {
         "@electron-toolkit/eslint-config": "^1.0.2",
         "@electron-toolkit/eslint-config-ts": "^2.0.0",
-        "@electron-toolkit/tsconfig": "^1.0.1",
+        "@electron-toolkit/tsconfig": "^2.0.0",
         "@heroicons/vue": "^2.1.5",
         "@rushstack/eslint-patch": "^1.10.3",
         "@tailwindcss/container-queries": "^0.1.1",
@@ -58,12 +58,12 @@
         "@zodios/core": "^10.9.6",
         "autoprefixer": "^10.4.19",
         "dayjs": "^1.11.11",
-        "electron": "^31.0.2",
-        "electron-builder": "^25.0.5",
+        "electron": "^38.4.0",
+        "electron-builder": "^26.0.12",
         "electron-builder-notarize": "^1.5.2",
-        "electron-devtools-installer": "^3.2.0",
+        "electron-devtools-installer": "^4.0.0",
         "electron-log": "^5.1.7",
-        "electron-vite": "^2.3.0",
+        "electron-vite": "^4.0.1",
         "eslint": "^8.57.0",
         "eslint-plugin-vue": "^9.26.0",
         "postcss": "^8.4.39",

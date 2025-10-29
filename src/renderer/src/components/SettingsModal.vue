@@ -2,6 +2,7 @@
 import { Modal, PrimaryButton, SecondaryButton, Checkbox, LoadingSpinner } from '@solidtime/ui'
 import { logout } from '../utils/oauth.ts'
 import { isWidgetActivated } from '../utils/widget.ts'
+import { isTrayTimerActivated } from '../utils/tray.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
 import { computed, onMounted, ref } from 'vue'
@@ -91,10 +92,14 @@ onMounted(() => {
             </div>
             <div class="mb-2 mt-6 font-medium text-muted" role="heading">Settings</div>
 
-            <div class="my-4 text-sm text-muted flex flex-col justify-center">
+            <div class="my-4 text-sm text-muted flex flex-col justify-center space-y-3">
                 <label class="flex items-center">
                     <Checkbox v-model:checked="isWidgetActivated" name="remember" />
                     <span class="ms-2 text-sm">Show Timetracker Widget</span>
+                </label>
+                <label class="flex items-center">
+                    <Checkbox v-model:checked="isTrayTimerActivated" name="tray_timer" />
+                    <span class="ms-2 text-sm">Show Tray / Menu Bar Timer</span>
                 </label>
             </div>
             <div class="mb-2 mt-6 font-medium text-muted" role="heading">Updates</div>

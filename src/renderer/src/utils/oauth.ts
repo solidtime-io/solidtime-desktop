@@ -28,8 +28,69 @@ const loginUrl = computed(() => {
 })
 
 export const accessToken = useStorage('access_token', localStorage.getItem('access_token'))
+export const refreshToken = useStorage('refresh_token', localStorage.getItem('refresh_token'))
 
 export const isLoggedIn = computed(() => !!accessToken.value)
+
+let refreshPromise: Promise<void> | null = null
+
+export async function refreshAccessToken(): Promise<void> {
+    if (refreshPromise) {
+        return refreshPromise
+    }
+
+    const currentRefreshToken = refreshToken.value
+    if (!currentRefreshToken) {
+        // No refresh token available, clear tokens
+        accessToken.value = ''
+        refreshToken.value = ''
+        window.localStorage.removeItem('refresh_token')
+        window.localStorage.removeItem('verifier')
+        throw new Error('No refresh token available - user logged out')
+    }
+
+    refreshPromise = (async () => {
+        try {
+            const data = {
+                grant_type: 'refresh_token',
+                client_id: clientId.value,
+                refresh_token: currentRefreshToken,
+            }
+
+            const response = await fetch(endpoint.value + '/oauth/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(data),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to refresh token')
+            }
+
+            interface OAuthResponse {
+                access_token: string
+                refresh_token: string
+            }
+
+            const responseData = (await response.json()) as OAuthResponse
+            accessToken.value = responseData.access_token
+            refreshToken.value = responseData.refresh_token
+        } catch (error) {
+            // Refresh failed, clear tokens
+            accessToken.value = ''
+            refreshToken.value = ''
+            window.localStorage.removeItem('refresh_token')
+            window.localStorage.removeItem('verifier')
+            throw error
+        } finally {
+            refreshPromise = null
+        }
+    })()
+
+    return refreshPromise
+}
 
 function sha256(plain: string) {
     // returns promise ArrayBuffer
@@ -95,7 +156,7 @@ export async function initializeAuth(queryClient: QueryClient) {
                 useStorage('currentTimeEntry', { ...emptyTimeEntry }).value = null
                 useStorage('lastTimeEntry', { ...emptyTimeEntry }).value = null
                 accessToken.value = responseData.access_token
-                window.localStorage.setItem('refresh_token', responseData.refresh_token)
+                refreshToken.value = responseData.refresh_token
                 showMainWindow()
             }
         }
@@ -107,6 +168,7 @@ export async function logout(queryClient: QueryClient) {
     useStorage('currentTimeEntry', { ...emptyTimeEntry }).value = null
     useStorage('lastTimeEntry', { ...emptyTimeEntry }).value = null
     accessToken.value = ''
+    refreshToken.value = ''
     window.localStorage.removeItem('refresh_token')
     window.localStorage.removeItem('verifier')
 }
