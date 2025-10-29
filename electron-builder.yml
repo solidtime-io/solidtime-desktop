@@ -40,6 +40,7 @@ dmg:
 linux:
     artifactName: ${name}-${arch}.${ext}
     icon: build/icon.icns
+    executableName: solidtime
     target:
         - target: deb
           arch:
@@ -56,11 +57,8 @@ linux:
               - arm64
     desktop:
         entry:
-            - Name=solidtime
-            - Exec=solidtime %U
-            - MimeType=x-scheme-handler/solidtime
-            - StartupNotify=true
-            - Terminal=false
+            Name: solidtime
+            MimeType: x-scheme-handler/solidtime
     maintainer: solidtime.io
     category: Utility
     mimeTypes:
