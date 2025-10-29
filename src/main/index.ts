@@ -42,10 +42,8 @@ function createWindow(): void {
     const miniWindow = initializeMiniWindow(icon)
     registerMiniWindowListeners(miniWindow)
 
-    if (process.platform !== 'linux') {
-        const tray = initializeTray(mainWindow)
-        registerTrayListeners(tray, mainWindow)
-    }
+    const tray = initializeTray(mainWindow)
+    registerTrayListeners(tray, mainWindow)
 
     // HMR for renderer base on electron-vite cli.
     // Load the remote URL for development or the local html file for production.
