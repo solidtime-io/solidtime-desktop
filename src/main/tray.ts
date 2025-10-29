@@ -114,8 +114,9 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
             if (isRunning && showTimer) {
                 updateTimerInterval(timeEntry, tray)
                 timerInterval = setInterval(() => updateTimerInterval(timeEntry, tray), 1000)
+            } else {
+                tray.setTitle('')
             }
-            tray.setTitle('')
             tray.setContextMenu(buildMenu(mainWindow, timeEntry))
         }
     })
