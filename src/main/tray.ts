@@ -12,6 +12,11 @@ let timerInterval: NodeJS.Timeout | undefined = undefined
 
 let currentTrayTimeEntry: TimeEntry | null = null
 
+function isTimerRunning(timeEntry: TimeEntry | null): boolean {
+    // empty timers have a empty string as start time because of the init state in timeEntries.ts
+    return !!(timeEntry && timeEntry.start && timeEntry.start !== '')
+}
+
 function getIconPath(active: boolean) {
     // On macOS, template images (with 'Template' in filename) are automatically inverted by the OS
     // So we should always use the non-inverted version on macOS
@@ -28,13 +33,13 @@ function getIconPath(active: boolean) {
 }
 
 function buildMenu(mainWindow: BrowserWindow, timeEntry: TimeEntry | null) {
-    const isRunning = !!(timeEntry && timeEntry.start && timeEntry.start !== '')
+    const isRunning = isTimerRunning(timeEntry)
 
     return Menu.buildFromTemplate([
         {
             label: timeEntry?.description ?? '',
             enabled: false,
-            visible: !!(isRunning && timeEntry.description && timeEntry.description !== ''),
+            visible: !!(isRunning && timeEntry?.description && timeEntry.description !== ''),
         },
         { label: isRunning ? 'Timer is running' : 'Timer is stopped', enabled: false },
         { type: 'separator' },
@@ -75,11 +80,7 @@ export function initializeTray(mainWindow: Electron.BrowserWindow) {
     tray.setContextMenu(buildMenu(mainWindow, null))
 
     nativeTheme.on('updated', () => {
-        const isRunning = !!(
-            currentTrayTimeEntry &&
-            currentTrayTimeEntry.start &&
-            currentTrayTimeEntry.start !== ''
-        )
+        const isRunning = isTimerRunning(currentTrayTimeEntry)
         tray.setImage(nativeImage.createFromPath(getIconPath(isRunning)))
     })
 
@@ -87,7 +88,7 @@ export function initializeTray(mainWindow: Electron.BrowserWindow) {
 }
 
 function updateTimerInterval(timeEntry: TimeEntry, tray: Tray) {
-    if (timeEntry && timeEntry.start && timeEntry.start !== '') {
+    if (isTimerRunning(timeEntry)) {
         const duration = dayjs.duration(dayjs().diff(dayjs(timeEntry.start), 'second'), 's')
         // duration formatted to HH:MM
         const hours = Math.floor(duration.asHours()).toString().padStart(2, '0')
@@ -102,7 +103,7 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
         if (serializedTimeEntry) {
             const timeEntry = JSON.parse(serializedTimeEntry) as TimeEntry
             currentTrayTimeEntry = timeEntry
-            const isRunning = !!timeEntry?.start
+            const isRunning = isTimerRunning(timeEntry)
             tray.setImage(nativeImage.createFromPath(getIconPath(isRunning)))
             tray.setToolTip(
                 isRunning ? 'solidtime - Timer is running' : 'solidtime - Timer is stopped'
