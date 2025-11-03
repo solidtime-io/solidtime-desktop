@@ -75,7 +75,7 @@ onMounted(() => {
                     <div class="flex items-center mt-3 space-x-3">
                         <img
                             :src="myData.profile_photo_url"
-                            class="rounded-full w-14"
+                            class="rounded-full w-14 h-14 object-cover"
                             alt="Profile image" />
                         <div>
                             <div class="text-sm text-muted py-0.5">
