@@ -63,6 +63,10 @@ linux:
     category: Utility
     mimeTypes:
         - x-scheme-handler/solidtime
+rpm:
+  fpm:
+    - --rpm-rpmbuild-define
+    - _build_id_links none
 appImage:
     artifactName: ${name}.${ext}
 npmRebuild: false
