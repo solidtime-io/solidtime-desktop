@@ -5,7 +5,7 @@ export function initializeMainWindow(icon: string) {
     const mainWindow = new BrowserWindow({
         width: 800,
         minWidth: 400,
-        trafficLightPosition: { x: 15, y: 15 },
+        trafficLightPosition: { x: 10, y: 10 },
         minHeight: 400,
         height: 800,
         show: false,
