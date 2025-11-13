@@ -80,7 +80,12 @@ import { useQueryClient } from '@tanstack/vue-query'
             </div>
             <div class="flex-1 flex overflow-hidden" v-if="isLoggedIn">
                 <SidebarNavigation v-if="isLoggedIn" />
-                <RouterView />
+                <router-view v-slot="{ Component }">
+                    <!-- full-calendar has an issue with keep-alive https://github.com/fullcalendar/fullcalendar/issues/7886 -->
+                    <keep-alive exclude="calendar">
+                        <component :is="Component" />
+                    </keep-alive>
+                </router-view>
             </div>
             <div v-else class="flex-1">
                 <div class="flex flex-col space-y-6 py-12 items-center justify-center">
