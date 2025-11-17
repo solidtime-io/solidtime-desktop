@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, useInfiniteQuery } from '@tanstack/vue-query'
 import { type Component, computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 
 import {
@@ -14,6 +14,7 @@ import {
     emptyTimeEntry,
     getAllTimeEntries,
     getCurrentTimeEntry,
+    getTimeEntriesPage,
     useTimeEntryCreateMutation,
     useTimeEntryDeleteMutation,
     useTimeEntryStopMutation,
@@ -39,7 +40,7 @@ import { LoadingSpinner } from '@solidtime/ui'
 import { useLiveTimer } from '../utils/liveTimer.ts'
 import { ClockIcon } from '@heroicons/vue/20/solid'
 import { CardTitle } from '@solidtime/ui'
-import { useStorage } from '@vueuse/core'
+import { useStorage, useElementVisibility } from '@vueuse/core'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { getAllClients, useClientCreateMutation } from '../utils/clients.ts'
 import { dayjs } from '../utils/dayjs.ts'
@@ -58,12 +59,30 @@ watch(currentOrganizationId, () => {
     selectedTimeEntries.value = []
 })
 
-const { data: timeEntriesResponse } = useQuery({
+const {
+    data: timeEntriesInfiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+} = useInfiniteQuery({
     queryKey: ['timeEntries', currentOrganizationId],
-    queryFn: () => getAllTimeEntries(currentOrganizationId.value, currentMembershipId.value),
+    queryFn: ({ pageParam }) =>
+        getTimeEntriesPage(currentOrganizationId.value, currentMembershipId.value, pageParam),
+    getNextPageParam: (lastPage) => {
+        if (lastPage?.data && lastPage.data.length > 0) {
+            const lastTimeEntry = lastPage.data[lastPage.data.length - 1]
+            return lastTimeEntry.start
+        }
+        return undefined
+    },
     enabled: currentOrganizationLoaded,
+    initialPageParam: undefined as string | undefined,
 })
-const timeEntries = computed(() => timeEntriesResponse.value?.data)
+
+const timeEntries = computed(() => {
+    if (!timeEntriesInfiniteData.value) return undefined
+    return timeEntriesInfiniteData.value.pages.flatMap((page) => page.data)
+})
 
 const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError } = useQuery({
     queryKey: ['currentTimeEntry'],
@@ -321,6 +340,16 @@ const canCreateProjects = computed(() => {
 })
 
 const showManualTimeEntryModal = ref(false)
+
+// Infinite scroll
+const loadMoreContainer = ref<HTMLDivElement | null>(null)
+const isLoadMoreVisible = useElementVisibility(loadMoreContainer)
+
+watch(isLoadMoreVisible, async (isVisible) => {
+    if (isVisible && hasNextPage.value && !isFetchingNextPage.value) {
+        await fetchNextPage()
+    }
+})
 </script>
 
 <template>
@@ -439,6 +468,19 @@ const showManualTimeEntryModal = ref(false)
                     <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>
                     <h3 class="text-white font-semibold">No time entries found</h3>
                     <p class="pb-5 text-muted">Create your first time entry now!</p>
+                </div>
+                <div ref="loadMoreContainer">
+                    <div
+                        v-if="isFetchingNextPage"
+                        class="flex justify-center items-center py-5 text-white font-medium">
+                        <LoadingSpinner class="ml-0 mr-0"></LoadingSpinner>
+                        <span class="ml-2"> Loading more time entries... </span>
+                    </div>
+                    <div
+                        v-else-if="!hasNextPage && timeEntries && timeEntries.length > 0"
+                        class="flex justify-center items-center py-5 text-muted font-medium">
+                        All time entries are loaded!
+                    </div>
                 </div>
             </div>
         </div>
