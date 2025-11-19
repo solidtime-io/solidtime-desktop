@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/linux_icon.png?asset'
@@ -8,6 +8,10 @@ import { initializeMainWindow, registerMainWindowListeners } from './mainWindow'
 import { initializeMiniWindow, registerMiniWindowListeners } from './miniWindow'
 import { registerDeeplinkListeners } from './deeplink'
 import { registerVueDevTools } from './devtools'
+import { initializeIdleMonitor } from './idleMonitor'
+import { runMigrations } from './db/migrate'
+import { registerActivityPeriodListeners } from './activityPeriods'
+import { registerSettingsListeners } from './settings'
 import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 
@@ -59,11 +63,38 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     registerVueDevTools()
 
     // Set app user model id for windows
     electronApp.setAppUserModelId('solidtime.desktop')
+
+    // Run database migrations first
+    try {
+        await runMigrations()
+        console.log('Database migrations completed successfully')
+    } catch (error) {
+        console.error('Failed to run migrations:', error)
+
+        // Show error dialog to user
+        const { response } = await dialog.showMessageBox({
+            type: 'error',
+            title: 'Database Initialization Failed',
+            message: 'The application database could not be initialized.',
+            detail: 'This may be due to a corrupted database or insufficient permissions. Would you like to continue anyway? (Some features may not work correctly)',
+            buttons: ['Quit Application', 'Continue Anyway'],
+            defaultId: 0,
+            cancelId: 0,
+        })
+
+        if (response === 0) {
+            // User chose to quit
+            app.quit()
+            return
+        }
+        // If response === 1, continue but log warning
+        console.warn('User chose to continue despite migration failure')
+    }
 
     // Default open or close DevTools by F12 in development
     // and ignore CommandOrControl + R in production.
@@ -75,7 +106,12 @@ app.whenReady().then(() => {
     // IPC test
     ipcMain.on('ping', () => console.log('pong'))
 
+    // Register IPC handlers
+    registerActivityPeriodListeners()
+    registerSettingsListeners()
+
     createWindow()
+    await initializeIdleMonitor()
 
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the

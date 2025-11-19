@@ -3,6 +3,8 @@ import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 export default defineConfig({
     main: {
         build: {
@@ -10,20 +12,28 @@ export default defineConfig({
         },
         plugins: [
             externalizeDepsPlugin(),
-            sentryVitePlugin({
-                org: 'solidtime',
-                project: 'desktop',
-            }),
+            ...(isProduction
+                ? [
+                      sentryVitePlugin({
+                          org: 'solidtime',
+                          project: 'desktop',
+                      }),
+                  ]
+                : []),
         ],
     },
 
     preload: {
         plugins: [
             externalizeDepsPlugin(),
-            sentryVitePlugin({
-                org: 'solidtime',
-                project: 'desktop',
-            }),
+            ...(isProduction
+                ? [
+                      sentryVitePlugin({
+                          org: 'solidtime',
+                          project: 'desktop',
+                      }),
+                  ]
+                : []),
         ],
         build: {
             sourcemap: true,
@@ -54,10 +64,14 @@ export default defineConfig({
         },
         plugins: [
             vue(),
-            sentryVitePlugin({
-                org: 'solidtime',
-                project: 'desktop',
-            }),
+            ...(isProduction
+                ? [
+                      sentryVitePlugin({
+                          org: 'solidtime',
+                          project: 'desktop',
+                      }),
+                  ]
+                : []),
         ],
     },
 })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, useInfiniteQuery } from '@tanstack/vue-query'
 import { type Component, computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 
 import {
@@ -8,12 +8,13 @@ import {
     TimeTrackerRunningInDifferentOrganizationOverlay,
     TimeEntryMassActionRow,
     TimeEntryCreateModal,
-    MoreOptionsDropdown,
+    TimeTrackerMoreOptionsDropdown,
 } from '@solidtime/ui'
 import {
     emptyTimeEntry,
     getAllTimeEntries,
     getCurrentTimeEntry,
+    getTimeEntriesPage,
     useTimeEntryCreateMutation,
     useTimeEntryDeleteMutation,
     useTimeEntryStopMutation,
@@ -37,42 +38,66 @@ import { getAllTags, useTagCreateMutation } from '../utils/tags.ts'
 import { LoadingSpinner } from '@solidtime/ui'
 
 import { useLiveTimer } from '../utils/liveTimer.ts'
-import { ClockIcon, PlusIcon } from '@heroicons/vue/20/solid'
+import { ClockIcon } from '@heroicons/vue/20/solid'
 import { CardTitle } from '@solidtime/ui'
-import { useStorage } from '@vueuse/core'
+import { useStorage, useElementVisibility } from '@vueuse/core'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { getAllClients, useClientCreateMutation } from '../utils/clients.ts'
 import { dayjs } from '../utils/dayjs.ts'
-import { listenForBackendEvent } from '../utils/events.ts'
 import { fromError } from 'zod-validation-error'
 import { apiClient } from '../utils/api'
-import { updateTrayState, isTrayTimerActivated } from '../utils/tray'
-import { getMe } from '../utils/me'
+import { updateTrayState } from '../utils/tray'
+import { isTrayTimerActivated } from '../utils/settings'
+import { time } from '@solidtime/ui'
+import { useTimer } from '../utils/useTimer.ts'
+const { getDayJsInstance } = time
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
 
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
 
+// Use the timer composable for shared timer logic
+const { currentTimeEntry, lastTimeEntry, isActive, stopTimer, startTimer, timeEntryCreate } =
+    useTimer()
+
+const selectedTimeEntries = ref([] as TimeEntry[])
+
 watch(currentOrganizationId, () => {
     selectedTimeEntries.value = []
 })
 
-const { data: timeEntriesResponse } = useQuery({
+const {
+    data: timeEntriesInfiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+} = useInfiniteQuery({
     queryKey: ['timeEntries', currentOrganizationId],
-    queryFn: () => getAllTimeEntries(currentOrganizationId.value, currentMembershipId.value),
+    queryFn: ({ pageParam }) =>
+        getTimeEntriesPage(currentOrganizationId.value, currentMembershipId.value, pageParam),
+    getNextPageParam: (lastPage) => {
+        if (lastPage?.data && lastPage.data.length > 0) {
+            const lastTimeEntry = lastPage.data[lastPage.data.length - 1]
+            return lastTimeEntry.start
+        }
+        return undefined
+    },
     enabled: currentOrganizationLoaded,
+    initialPageParam: undefined as string | undefined,
 })
-const timeEntries = computed(() => timeEntriesResponse.value?.data)
+
+const timeEntries = computed(() => {
+    if (!timeEntriesInfiniteData.value) return undefined
+    return timeEntriesInfiniteData.value.pages.flatMap((page) => page.data)
+})
 
 const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError } = useQuery({
     queryKey: ['currentTimeEntry'],
     queryFn: () => getCurrentTimeEntry(),
 })
 
-const currentTimeEntry = useStorage<TimeEntry>('currentTimeEntry', { ...emptyTimeEntry })
-const lastTimeEntry = useStorage<TimeEntry>('lastTimeEntry', { ...emptyTimeEntry })
-
+// Update lastTimeEntry when timeEntries change
 watch(timeEntries, () => {
     if (timeEntries.value?.[0]) {
         lastTimeEntry.value = { ...timeEntries.value?.[0] }
@@ -128,15 +153,12 @@ const timeEntriesUpdate = useTimeEntriesUpdateMutation()
 const timeEntriesDelete = useTimeEntriesDeleteMutation()
 const timeEntryUpdate = useTimeEntryUpdateMutation()
 const timeEntryDelete = useTimeEntryDeleteMutation()
-const timeEntryCreate = useTimeEntryCreateMutation()
-const timeEntryStop = useTimeEntryStopMutation()
 const tagCreate = useTagCreateMutation()
 
 function createTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
     const updatedTimeEntry = {
         ...timeEntry,
         member_id: currentMembershipId.value,
-        end: null,
     } as CreateTimeEntryBody
     timeEntryCreate.mutate(updatedTimeEntry)
 }
@@ -158,17 +180,7 @@ async function createTag(newTagName: string): Promise<Tag | undefined> {
     return undefined
 }
 
-const isActive = computed(() => {
-    if (currentTimeEntry.value) {
-        return (
-            currentTimeEntry.value.start !== '' &&
-            currentTimeEntry.value.start !== null &&
-            currentTimeEntry.value.end === null
-        )
-    }
-    return false
-})
-
+// Watch for current time entry changes and update tray state
 watch(currentTimeEntry, () => {
     updateTrayState({ ...currentTimeEntry.value })
 })
@@ -177,6 +189,7 @@ watch(isTrayTimerActivated, () => {
     updateTrayState({ ...currentTimeEntry.value })
 })
 
+// Watch for active state changes and manage live timer
 watchEffect(() => {
     if (isActive.value) {
         startLiveTimer()
@@ -195,43 +208,14 @@ function updateCurrentTimeEntry() {
     }
 }
 
-function startTimer() {
-    if (currentTimeEntry.value.start === '') {
-        currentTimeEntry.value.start = dayjs().utc().format()
+function discardTimer() {
+    // If there's an active timer with an ID, delete it from the backend
+    if (currentTimeEntry.value?.id && currentTimeEntry.value.id !== '') {
+        timeEntryDelete.mutate(currentTimeEntry.value)
     }
-    createTimeEntry(currentTimeEntry.value)
-    startLiveTimer()
-}
-
-async function stopTimer() {
-    const stoppedTimeEntry = { ...currentTimeEntry.value }
-    currentMembershipId.value = memberships.value.find(
-        (membership) => membership.organization.id === stoppedTimeEntry.organization_id
-    )?.id
     currentTimeEntry.value = { ...emptyTimeEntry }
     stopLiveTimer()
-    timeEntryStop.mutate({ ...stoppedTimeEntry, end: dayjs().utc().format() })
 }
-
-onMounted(async () => {
-    await listenForBackendEvent('startTimer', () => {
-        if (lastTimeEntry.value) {
-            currentTimeEntry.value.project_id = lastTimeEntry.value.project_id
-            currentTimeEntry.value.task_id = lastTimeEntry.value.task_id
-            currentTimeEntry.value.description = lastTimeEntry.value.description
-            currentTimeEntry.value.tags = lastTimeEntry.value.tags
-            currentTimeEntry.value.billable = lastTimeEntry.value.billable
-            currentTimeEntry.value.start = dayjs().utc().format()
-        }
-        createTimeEntry(currentTimeEntry.value)
-        startLiveTimer()
-    })
-    await listenForBackendEvent('stopTimer', () => {
-        nextTick(() => {
-            stopTimer()
-        })
-    })
-})
 
 const projectCreateMutation = useProjectCreateMutation()
 
@@ -275,20 +259,6 @@ function switchOrganization() {
     }
 }
 
-const { data: meResponse } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getMe(),
-})
-
-watch(meResponse, () => {
-    if (meResponse.value?.data) {
-        window.getTimezoneSetting = () => meResponse.value.data.timezone
-        window.getWeekStartSetting = () => meResponse.value.data.week_start
-    }
-})
-
-const selectedTimeEntries = ref([] as TimeEntry[])
-
 function deleteSelected() {
     timeEntriesDelete.mutate(selectedTimeEntries.value)
     selectedTimeEntries.value = []
@@ -313,6 +283,16 @@ const canCreateProjects = computed(() => {
 })
 
 const showManualTimeEntryModal = ref(false)
+
+// Infinite scroll
+const loadMoreContainer = ref<HTMLDivElement | null>(null)
+const isLoadMoreVisible = useElementVisibility(loadMoreContainer)
+
+watch(isLoadMoreVisible, async (isVisible) => {
+    if (isVisible && hasNextPage.value && !isFetchingNextPage.value) {
+        await fetchNextPage()
+    }
+})
 </script>
 
 <template>
@@ -320,9 +300,8 @@ const showManualTimeEntryModal = ref(false)
         <div
             v-if="timeEntries && projects && tasks && tags && clients"
             class="flex flex-col h-full">
-            <div class="flex">
-                <div
-                    class="pl-4 pb-4 pt-2 border-b border-border-primary bg-primary z-10 w-full top-0 left-0">
+            <div class="flex bg-background">
+                <div class="pl-4 pb-4 pt-4 border-b border-border-primary z-10 w-full top-0 left-0">
                     <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
                     <div class="relative">
                         <TimeTrackerRunningInDifferentOrganizationOverlay
@@ -347,6 +326,7 @@ const showManualTimeEntryModal = ref(false)
                             :createTag
                             :isActive
                             :currency
+                            :timeEntries="timeEntries"
                             @start-live-timer="startLiveTimer"
                             @stop-live-timer="stopLiveTimer"
                             @start-timer="startTimer"
@@ -354,16 +334,11 @@ const showManualTimeEntryModal = ref(false)
                             @update-time-entry="updateCurrentTimeEntry"></TimeTrackerControls>
                     </div>
                 </div>
-                <div class="flex justify-center items-center pt-8 group pr-4">
-                    <MoreOptionsDropdown label="More Time Entry Options">
-                        <button
-                            aria-label="Create Manual time entry"
-                            class="flex items-center space-x-3 rounded w-full px-3 py-2.5 text-start text-sm font-medium leading-5 text-white hover:bg-card-background-active focus:outline-none focus:bg-card-background-active transition duration-150 ease-in-out"
-                            @click="showManualTimeEntryModal = true">
-                            <PlusIcon class="w-5 text-icon-active"></PlusIcon>
-                            <span>Create Manual Time Entry</span>
-                        </button>
-                    </MoreOptionsDropdown>
+                <div class="flex justify-center items-center pt-5 group pr-4">
+                    <TimeTrackerMoreOptionsDropdown
+                        :has-active-timer="isActive"
+                        @manual-entry="showManualTimeEntryModal = true"
+                        @discard="discardTimer" />
                     <TimeEntryCreateModal
                         v-model:show="showManualTimeEntryModal"
                         :enableEstimatedTime="false"
@@ -412,6 +387,8 @@ const showManualTimeEntryModal = ref(false)
                     :createProject
                     :createClient
                     :currency="currency"
+                    :enableEstimatedTime="false"
+                    :canCreateProject="canCreateProjects"
                     :updateTimeEntry="
                         (arg: TimeEntry) => {
                             timeEntryUpdate.mutate(arg)
@@ -434,6 +411,19 @@ const showManualTimeEntryModal = ref(false)
                     <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>
                     <h3 class="text-white font-semibold">No time entries found</h3>
                     <p class="pb-5 text-muted">Create your first time entry now!</p>
+                </div>
+                <div ref="loadMoreContainer">
+                    <div
+                        v-if="isFetchingNextPage"
+                        class="flex justify-center items-center py-5 text-white font-medium">
+                        <LoadingSpinner class="ml-0 mr-0"></LoadingSpinner>
+                        <span class="ml-2"> Loading more time entries... </span>
+                    </div>
+                    <div
+                        v-else-if="!hasNextPage && timeEntries && timeEntries.length > 0"
+                        class="flex justify-center items-center py-5 text-muted font-medium">
+                        All time entries are loaded!
+                    </div>
                 </div>
             </div>
         </div>

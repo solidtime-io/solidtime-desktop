@@ -31,6 +31,19 @@ if (process.contextIsolated || true) {
             updateTrayState: (timeEntry: string, showTimer: boolean) =>
                 ipcRenderer.send('updateTrayState', timeEntry, showTimer),
             updateAutoUpdater: () => ipcRenderer.send('updateAutoUpdater'),
+            updateIdleThreshold: (thresholdMinutes: number) =>
+                ipcRenderer.send('updateIdleThreshold', thresholdMinutes),
+            updateIdleDetectionEnabled: (enabled: boolean) =>
+                ipcRenderer.send('updateIdleDetectionEnabled', enabled),
+            timerStateChanged: (running: boolean) => ipcRenderer.send('timerStateChanged', running),
+            onIdleDialogResponse: (callback) => {
+                const listener = (_event, value) => callback(value)
+                ipcRenderer.on('idleDialogResponse', listener)
+                // Return cleanup function to remove the listener
+                return () => ipcRenderer.removeListener('idleDialogResponse', listener)
+            },
+            getSettings: () => ipcRenderer.invoke('getSettings'),
+            updateSettings: (settings) => ipcRenderer.invoke('updateSettings', settings),
         })
     } catch (error) {
         console.error(error)

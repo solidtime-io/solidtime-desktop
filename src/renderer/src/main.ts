@@ -1,25 +1,30 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
+import '@solidtime/ui/style.css'
 import { VueQueryPlugin, type VueQueryPluginOptions } from '@tanstack/vue-query'
+import router from './router'
 
 const app = createApp(App)
 
 import * as Sentry from '@sentry/electron/renderer'
 
-Sentry.init({
-    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+// Only initialize Sentry in production
+if (import.meta.env.PROD) {
+    Sentry.init({
+        integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
 
-    // Set tracesSampleRate to 1.0 to capture 100%
-    // of transactions for performance monitoring.
-    // We recommend adjusting this value in production
-    tracesSampleRate: 0.1,
+        // Set tracesSampleRate to 1.0 to capture 100%
+        // of transactions for performance monitoring.
+        // We recommend adjusting this value in production
+        tracesSampleRate: 0.1,
 
-    // Capture Replay for 10% of all sessions,
-    // plus for 100% of sessions with an error
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-})
+        // Capture Replay for 10% of all sessions,
+        // plus for 100% of sessions with an error
+        replaysSessionSampleRate: 0.1,
+        replaysOnErrorSampleRate: 1.0,
+    })
+}
 
 window.addEventListener('keypress', (event) => {
     if (event.key === 'Escape') {
@@ -57,5 +62,22 @@ const vueQueryOptions: VueQueryPluginOptions = {
     },
 }
 
+import { focusManager } from '@tanstack/vue-query'
+
+focusManager.setEventListener((handleFocus) => {
+    // Listen to visibilitychange and focus
+    if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('visibilitychange', handleFocus, false)
+        window.addEventListener('focus', handleFocus, false)
+    }
+
+    return () => {
+        // Be sure to unsubscribe if a new handler is set
+        window.removeEventListener('visibilitychange', handleFocus)
+        window.removeEventListener('focus', handleFocus)
+    }
+})
+
+app.use(router)
 app.use(VueQueryPlugin, vueQueryOptions)
 app.mount('#app')
