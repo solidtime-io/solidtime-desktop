@@ -1,0 +1,20 @@
+{
+    "version": "7",
+    "dialect": "sqlite",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "6",
+            "when": 1763389706823,
+            "tag": "0000_create_activity_periods_table",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "6",
+            "when": 1731945600000,
+            "tag": "0001_add_settings_table",
+            "breakpoints": true
+        }
+    ]
+}

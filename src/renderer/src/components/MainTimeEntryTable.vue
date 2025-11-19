@@ -44,16 +44,24 @@ import { useStorage, useElementVisibility } from '@vueuse/core'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { getAllClients, useClientCreateMutation } from '../utils/clients.ts'
 import { dayjs } from '../utils/dayjs.ts'
-import { listenForBackendEvent } from '../utils/events.ts'
 import { fromError } from 'zod-validation-error'
 import { apiClient } from '../utils/api'
-import { updateTrayState, isTrayTimerActivated } from '../utils/tray'
-import { getMe } from '../utils/me'
+import { updateTrayState } from '../utils/tray'
+import { isTrayTimerActivated } from '../utils/settings'
+import { time } from '@solidtime/ui'
+import { useTimer } from '../utils/useTimer.ts'
+const { getDayJsInstance } = time
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
 
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
+
+// Use the timer composable for shared timer logic
+const { currentTimeEntry, lastTimeEntry, isActive, stopTimer, startTimer, timeEntryCreate } =
+    useTimer()
+
+const selectedTimeEntries = ref([] as TimeEntry[])
 
 watch(currentOrganizationId, () => {
     selectedTimeEntries.value = []
@@ -89,9 +97,7 @@ const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError
     queryFn: () => getCurrentTimeEntry(),
 })
 
-const currentTimeEntry = useStorage<TimeEntry>('currentTimeEntry', { ...emptyTimeEntry })
-const lastTimeEntry = useStorage<TimeEntry>('lastTimeEntry', { ...emptyTimeEntry })
-
+// Update lastTimeEntry when timeEntries change
 watch(timeEntries, () => {
     if (timeEntries.value?.[0]) {
         lastTimeEntry.value = { ...timeEntries.value?.[0] }
@@ -147,8 +153,6 @@ const timeEntriesUpdate = useTimeEntriesUpdateMutation()
 const timeEntriesDelete = useTimeEntriesDeleteMutation()
 const timeEntryUpdate = useTimeEntryUpdateMutation()
 const timeEntryDelete = useTimeEntryDeleteMutation()
-const timeEntryCreate = useTimeEntryCreateMutation()
-const timeEntryStop = useTimeEntryStopMutation()
 const tagCreate = useTagCreateMutation()
 
 function createTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
@@ -176,17 +180,7 @@ async function createTag(newTagName: string): Promise<Tag | undefined> {
     return undefined
 }
 
-const isActive = computed(() => {
-    if (currentTimeEntry.value) {
-        return (
-            currentTimeEntry.value.start !== '' &&
-            currentTimeEntry.value.start !== null &&
-            currentTimeEntry.value.end === null
-        )
-    }
-    return false
-})
-
+// Watch for current time entry changes and update tray state
 watch(currentTimeEntry, () => {
     updateTrayState({ ...currentTimeEntry.value })
 })
@@ -195,6 +189,7 @@ watch(isTrayTimerActivated, () => {
     updateTrayState({ ...currentTimeEntry.value })
 })
 
+// Watch for active state changes and manage live timer
 watchEffect(() => {
     if (isActive.value) {
         startLiveTimer()
@@ -213,24 +208,6 @@ function updateCurrentTimeEntry() {
     }
 }
 
-function startTimer() {
-    if (currentTimeEntry.value.start === '') {
-        currentTimeEntry.value.start = dayjs().utc().format()
-    }
-    createTimeEntry(currentTimeEntry.value)
-    startLiveTimer()
-}
-
-async function stopTimer() {
-    const stoppedTimeEntry = { ...currentTimeEntry.value }
-    currentMembershipId.value = memberships.value.find(
-        (membership) => membership.organization.id === stoppedTimeEntry.organization_id
-    )?.id
-    currentTimeEntry.value = { ...emptyTimeEntry }
-    stopLiveTimer()
-    timeEntryStop.mutate({ ...stoppedTimeEntry, end: dayjs().utc().format() })
-}
-
 function discardTimer() {
     // If there's an active timer with an ID, delete it from the backend
     if (currentTimeEntry.value?.id && currentTimeEntry.value.id !== '') {
@@ -239,26 +216,6 @@ function discardTimer() {
     currentTimeEntry.value = { ...emptyTimeEntry }
     stopLiveTimer()
 }
-
-onMounted(async () => {
-    await listenForBackendEvent('startTimer', () => {
-        if (lastTimeEntry.value) {
-            currentTimeEntry.value.project_id = lastTimeEntry.value.project_id
-            currentTimeEntry.value.task_id = lastTimeEntry.value.task_id
-            currentTimeEntry.value.description = lastTimeEntry.value.description
-            currentTimeEntry.value.tags = lastTimeEntry.value.tags
-            currentTimeEntry.value.billable = lastTimeEntry.value.billable
-            currentTimeEntry.value.start = dayjs().utc().format()
-        }
-        createTimeEntry(currentTimeEntry.value)
-        startLiveTimer()
-    })
-    await listenForBackendEvent('stopTimer', () => {
-        nextTick(() => {
-            stopTimer()
-        })
-    })
-})
 
 const projectCreateMutation = useProjectCreateMutation()
 
@@ -302,20 +259,6 @@ function switchOrganization() {
     }
 }
 
-const { data: meResponse } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getMe(),
-})
-
-watch(meResponse, () => {
-    if (meResponse.value?.data) {
-        window.getTimezoneSetting = () => meResponse.value.data.timezone
-        window.getWeekStartSetting = () => meResponse.value.data.week_start
-    }
-})
-
-const selectedTimeEntries = ref([] as TimeEntry[])
-
 function deleteSelected() {
     timeEntriesDelete.mutate(selectedTimeEntries.value)
     selectedTimeEntries.value = []
@@ -358,7 +301,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
             v-if="timeEntries && projects && tasks && tags && clients"
             class="flex flex-col h-full">
             <div class="flex bg-background">
-                <div class="pl-4 pb-4 pt-2 border-b border-border-primary z-10 w-full top-0 left-0">
+                <div class="pl-4 pb-4 pt-4 border-b border-border-primary z-10 w-full top-0 left-0">
                     <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
                     <div class="relative">
                         <TimeTrackerRunningInDifferentOrganizationOverlay

@@ -46,6 +46,39 @@ export function getAllTimeEntries(
     })
 }
 
+export function getTimeEntriesPage(
+    currentOrganizationId: string | null,
+    membershipId: string | null,
+    endDate?: string
+) {
+    if (currentOrganizationId === null) {
+        throw new Error('No current organization id - all time entries')
+    }
+    if (membershipId === null) {
+        throw new Error('No current member id - all time entries')
+    }
+
+    const queries: {
+        only_full_dates: string
+        member_id: string
+        end?: string
+    } = {
+        only_full_dates: 'true',
+        member_id: membershipId,
+    }
+
+    if (endDate) {
+        queries.end = endDate
+    }
+
+    return apiClient.value.getTimeEntries({
+        params: {
+            organization: currentOrganizationId,
+        },
+        queries,
+    })
+}
+
 export function getCurrentTimeEntry() {
     return apiClient.value.getMyActiveTimeEntry({})
 }
@@ -82,12 +115,6 @@ export function useTimeEntryStopMutation() {
             await queryClient.cancelQueries({ queryKey: ['timeEntries', currentOrganizationId] })
             await queryClient.cancelQueries({ queryKey: ['currentTimeEntry'] })
 
-            queryClient.setQueryData(
-                ['timeEntries', currentOrganizationId],
-                (old: TimeEntryResponse) => {
-                    return { data: [timeEntry, ...old.data] }
-                }
-            )
             queryClient.setQueryData(['currentTimeEntry'], () => emptyTimeEntry)
 
             return { timeEntry }

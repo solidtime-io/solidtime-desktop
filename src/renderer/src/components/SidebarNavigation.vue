@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ClockIcon, CalendarIcon, ChartPieIcon } from '@heroicons/vue/24/outline'
+import { ClockIcon, CalendarIcon, Cog6ToothIcon } from '@heroicons/vue/24/outline'
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { Button, TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@solidtime/ui'
@@ -19,9 +19,9 @@ const navItems = [
         icon: CalendarIcon,
     },
     {
-        name: 'Statistics',
-        path: '/statistics',
-        icon: ChartPieIcon,
+        name: 'Settings',
+        path: '/settings',
+        icon: Cog6ToothIcon,
     },
 ]
 

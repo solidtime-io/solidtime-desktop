@@ -19,6 +19,7 @@ import type {
     TimeEntry,
     TimeEntryResponse,
 } from '@solidtime/api'
+import type { ActivityPeriod } from '@solidtime/ui'
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
@@ -205,6 +206,51 @@ function onRefresh() {
         queryKey: ['timeEntry', 'calendar'],
     })
 }
+
+// Fetch activity periods from the database
+const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
+    queryKey: computed(() => [
+        'activityPeriods',
+        {
+            start: expandedDateRange.value.start,
+            end: expandedDateRange.value.end,
+        },
+    ]),
+    enabled: enableCalendarQuery,
+    placeholderData: (previousData) => previousData,
+    queryFn: async () => {
+        try {
+            if (!expandedDateRange.value.start || !expandedDateRange.value.end) {
+                return []
+            }
+
+            // Call the IPC handler to get activity periods from the database
+            const result = await window.electron.ipcRenderer.invoke(
+                'getActivityPeriods',
+                expandedDateRange.value.start,
+                expandedDateRange.value.end
+            )
+
+            // Handle the new response format with success/data/error
+            if (result && result.success && result.data) {
+                return result.data
+            }
+
+            if (result && result.error) {
+                console.error('Error fetching activity periods:', result.error)
+            }
+
+            return []
+        } catch (error) {
+            console.error('Failed to fetch activity periods:', error)
+            return []
+        }
+    },
+})
+
+const activityPeriods = computed<ActivityPeriod[]>(() => {
+    return activityPeriodsData.value || []
+})
 </script>
 
 <template>
@@ -219,6 +265,7 @@ function onRefresh() {
             :tasks="tasks"
             :clients="clients"
             :tags="tags"
+            :activity-periods="activityPeriods"
             :loading="timeEntriesLoading"
             :enable-estimated-time="false"
             :currency="currentMembership?.organization?.currency || 'USD'"
