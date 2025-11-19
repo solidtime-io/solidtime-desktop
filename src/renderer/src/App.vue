@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PrimaryButton } from '@solidtime/ui'
+import { PrimaryButton, time, TimeTrackerStartStop } from '@solidtime/ui'
 import { Cog6ToothIcon } from '@heroicons/vue/16/solid'
 
 declare global {
@@ -9,27 +9,123 @@ declare global {
     }
 }
 
-import { onMounted, ref, watchEffect } from 'vue'
+import { VueQueryDevtools } from '@tanstack/vue-query-devtools'
+import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
+import { useQueryClient, useQuery } from '@tanstack/vue-query'
+
+import { onMounted, ref, watchEffect, watch, computed } from 'vue'
 import { initializeAuth, isLoggedIn, openLoginWindow } from './utils/oauth.ts'
 
 import InstanceSettingsModal from './components/InstanceSettingsModal.vue'
 import { hideMiniWindow, showMiniWindow } from './utils/window.ts'
-import { isWidgetActivated } from './utils/widget.ts'
 import OrganizationSwitcher from './components/OrganizationSwitcher.vue'
-import SettingsModal from './components/SettingsModal.vue'
 import { useTheme } from './utils/theme.ts'
 import SidebarNavigation from './components/SidebarNavigation.vue'
+import { isWidgetActivated } from './utils/settings.ts'
 
 import UpdateStatusBar from './components/UpdateStatusBar.vue'
+import { useTimer } from './utils/useTimer.ts'
+import { useRouter } from 'vue-router'
+import { listenForBackendEvent } from './utils/events.ts'
+import { getMe } from './utils/me'
+import { initializeSettings } from './utils/settings.ts'
+import { useLiveTimer } from './utils/liveTimer'
+import { dayjs } from './utils/dayjs'
+import { useStorage } from '@vueuse/core'
+import { emptyTimeEntry } from './utils/timeEntries'
+
+const router = useRouter()
+
 const queryClient = useQueryClient()
 
-onMounted(() => {
+// Use the timer composable for shared timer logic
+const { stopTimer, startTimer, isActive } = useTimer()
+
+// Live timer for bottom row display
+const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
+const currentTimeEntry = useStorage('currentTimeEntry', { ...emptyTimeEntry })
+
+const currentTime = computed(() => {
+    if (liveTimer.value && currentTimeEntry.value.start) {
+        const startTime = dayjs(currentTimeEntry.value.start)
+        const diff = liveTimer.value.diff(startTime, 'seconds')
+        return time.formatDuration(diff)
+    }
+    return '00:00:00'
+})
+
+// Start/stop live timer based on active state
+watchEffect(() => {
+    if (isActive.value) {
+        startLiveTimer()
+    } else {
+        stopLiveTimer()
+    }
+})
+
+// Fetch user data for timezone and week start settings
+const { data: meResponse } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getMe(),
+})
+
+watch(meResponse, () => {
+    if (meResponse.value?.data) {
+        window.getTimezoneSetting = () => meResponse.value.data.timezone
+        window.getWeekStartSetting = () => meResponse.value.data.week_start
+    }
+})
+
+// Watch timer state and notify main process for idle detection
+watch(isActive, (active) => {
+    if (window.electronAPI?.timerStateChanged) {
+        window.electronAPI.timerStateChanged(active)
+    }
+})
+
+onMounted(async () => {
     window.getTimezoneSetting = () => 'Europe/Vienna'
     window.getWeekStartSetting = () => 'monday'
 
     initializeAuth(queryClient)
     useTheme()
+
+    // Initialize settings from database
+    await initializeSettings()
+
+    // Listen for timer events from mini window
+    await listenForBackendEvent('startTimer', () => {
+        startTimer()
+    })
+    await listenForBackendEvent('stopTimer', () => {
+        stopTimer()
+    })
+
+    // Listen for idle dialog response from main process
+    if (window.electronAPI?.onIdleDialogResponse) {
+        window.electronAPI.onIdleDialogResponse((data) => {
+            handleIdleDialogResponse(data.choice, data.idleStartTime)
+        })
+    }
 })
+
+async function handleIdleDialogResponse(choice: number, idleStartTime: string) {
+    switch (choice) {
+        case 0: // Keep Idle Time
+            // Do nothing - keep timer running as-is
+            break
+        case 1: // Discard Idle Time
+            // Stop the timer and set the end time to when idle started
+            await stopTimer(idleStartTime)
+            break
+        case 2: // Discard & Start New Timer
+            // Stop the timer and set the end time to when idle started
+            await stopTimer(idleStartTime)
+            // Start a new timer after the stop completes
+            startTimer()
+            break
+    }
+}
 
 watchEffect(async () => {
     if (isLoggedIn.value && isWidgetActivated.value) {
@@ -39,7 +135,6 @@ watchEffect(async () => {
     }
 })
 
-const showSettingsModal = ref(false)
 const showInstanceSettingsModal = ref(false)
 
 import { useMagicKeys, whenever } from '@vueuse/core'
@@ -47,19 +142,14 @@ const keys = useMagicKeys()
 const cmdComma = keys['Cmd+,']
 whenever(cmdComma, () => {
     if (isLoggedIn.value) {
-        showSettingsModal.value = true
+        router.push('/settings')
     } else {
         showInstanceSettingsModal.value = true
     }
 })
-
-import { VueQueryDevtools } from '@tanstack/vue-query-devtools'
-import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
-import { useQueryClient } from '@tanstack/vue-query'
 </script>
 
 <template>
-    <VueQueryDevtools></VueQueryDevtools>
     <AutoUpdaterOverlay></AutoUpdaterOverlay>
     <div class="flex h-screen">
         <div class="flex-1 flex flex-col">
@@ -69,23 +159,33 @@ import { useQueryClient } from '@tanstack/vue-query'
                 <div v-if="isLoggedIn" class="flex items-center space-x-2">
                     <UpdateStatusBar></UpdateStatusBar>
                     <OrganizationSwitcher></OrganizationSwitcher>
-                    <button @click="showSettingsModal = true">
-                        <Cog6ToothIcon
-                            class="w-5 cursor-pointer text-muted opacity-50 hover:opacity-100"></Cog6ToothIcon>
-                    </button>
-                    <SettingsModal
-                        :show="showSettingsModal"
-                        @close="showSettingsModal = false"></SettingsModal>
                 </div>
             </div>
-            <div class="flex-1 flex overflow-hidden" v-if="isLoggedIn">
-                <SidebarNavigation v-if="isLoggedIn" />
-                <router-view v-slot="{ Component }">
-                    <!-- full-calendar has an issue with keep-alive https://github.com/fullcalendar/fullcalendar/issues/7886 -->
-                    <keep-alive exclude="calendar">
-                        <component :is="Component" />
-                    </keep-alive>
-                </router-view>
+            <div class="flex-1 flex flex-col overflow-hidden" v-if="isLoggedIn">
+                <div class="flex-1 flex overflow-hidden">
+                    <SidebarNavigation />
+                    <router-view v-slot="{ Component }">
+                        <!-- full-calendar has an issue with keep-alive https://github.com/fullcalendar/fullcalendar/issues/7886 -->
+                        <keep-alive exclude="CalendarPage">
+                            <component :is="Component" />
+                        </keep-alive>
+                    </router-view>
+                </div>
+                <!-- Footer Timer -->
+                <div
+                    class="h-10 w-full bg-background border-t border-border-primary flex items-center justify-between px-4">
+                    <div class="flex items-center space-x-3">
+                        <div v-if="isActive" class="flex items-center space-x-3">
+                            <div class="text-text-tertiary font-medium text-xs">Current Timer</div>
+                            <div class="text-text-primary font-medium text-sm">
+                                {{ currentTime }}
+                            </div>
+                        </div>
+                        <div v-else class="text-text-tertiary font-medium text-xs">
+                            No timer running
+                        </div>
+                    </div>
+                </div>
             </div>
             <div v-else class="flex-1">
                 <div class="flex flex-col space-y-6 py-12 items-center justify-center">

@@ -1,6 +1,12 @@
 import { join } from 'path'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 
+let mainWindowInstance: BrowserWindow | null = null
+
+export function getMainWindow(): BrowserWindow | null {
+    return mainWindowInstance
+}
+
 export function initializeMainWindow(icon: string) {
     const mainWindow = new BrowserWindow({
         width: 800,
@@ -16,6 +22,8 @@ export function initializeMainWindow(icon: string) {
         webPreferences: {
             preload: join(__dirname, '../preload/main.mjs'),
             sandbox: false,
+            // The vite dev server causes CORS issues, so we disable webSecurity in development mode
+            webSecurity: process.env.NODE_ENV !== 'development',
         },
     })
 
@@ -39,6 +47,7 @@ export function initializeMainWindow(icon: string) {
         mainWindow.show()
     })
 
+    mainWindowInstance = mainWindow
     return mainWindow
 }
 

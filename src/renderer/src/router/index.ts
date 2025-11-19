@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import TimePage from '../pages/TimePage.vue'
 import CalendarPage from '../pages/CalendarPage.vue'
+import SettingsPage from '../pages/SettingsPage.vue'
 import { useQueryClient } from '@tanstack/vue-query'
 
 const routes = [
@@ -17,6 +18,11 @@ const routes = [
         path: '/calendar',
         name: 'calendar',
         component: CalendarPage,
+    },
+    {
+        path: '/settings',
+        name: 'settings',
+        component: SettingsPage,
     },
 ]
 

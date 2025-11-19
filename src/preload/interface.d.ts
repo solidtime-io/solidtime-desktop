@@ -1,3 +1,10 @@
+export interface AppSettings {
+    widgetActivated: boolean
+    trayTimerActivated: boolean
+    idleDetectionEnabled: boolean
+    idleThresholdMinutes: number
+}
+
 export interface IElectronAPI {
     loadPreferences: () => Promise<void>
     showMainWindow: () => void
@@ -15,6 +22,16 @@ export interface IElectronAPI {
     onStopTimer: (callback: () => void) => void
     updateTrayState: (timeEntry: string, showTimer: boolean) => void
     updateAutoUpdater: () => void
+    updateIdleThreshold: (thresholdMinutes: number) => void
+    updateIdleDetectionEnabled: (enabled: boolean) => void
+    timerStateChanged: (running: boolean) => void
+    onIdleDialogResponse: (
+        callback: (data: { choice: number; idleStartTime: string; idleEndTime: string }) => void
+    ) => () => void // Returns cleanup function to remove listener
+    getSettings: () => Promise<{ success: boolean; data?: AppSettings; error?: string }>
+    updateSettings: (
+        settings: Partial<AppSettings>
+    ) => Promise<{ success: boolean; data?: AppSettings; error?: string }>
 }
 
 declare global {
