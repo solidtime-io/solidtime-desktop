@@ -8,5 +8,8 @@ export function getAllTasks(currentOrganizationId: string | null) {
         params: {
             organization: currentOrganizationId,
         },
+        queries: {
+            done: 'all',
+        },
     })
 }

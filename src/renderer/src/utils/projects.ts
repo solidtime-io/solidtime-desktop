@@ -11,6 +11,9 @@ export function getAllProjects(currentOrganizationId: string | null) {
         params: {
             organization: currentOrganizationId,
         },
+        queries: {
+            archived: 'all',
+        },
     })
 }
 
