@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { windowActivities } from './db/schema'
-import { and, gte, lte, sum, desc } from 'drizzle-orm'
+import { and, gte, lte, sql } from 'drizzle-orm'
 
 /**
  * Registers IPC handlers for window activities
@@ -31,14 +31,12 @@ export function registerWindowActivitiesHandlers() {
     // Get aggregated window activity statistics for a date range
     ipcMain.handle('getWindowActivityStats', async (_event, startDate: string, endDate: string) => {
         try {
-            const totalDuration = sum(windowActivities.durationSeconds).as('count')
-
             const stats = await db
                 .select({
                     appName: windowActivities.appName,
                     url: windowActivities.url,
                     windowTitle: windowActivities.windowTitle,
-                    count: totalDuration,
+                    count: sql<number>`SUM(${windowActivities.durationSeconds})`,
                 })
                 .from(windowActivities)
                 .where(
@@ -52,7 +50,7 @@ export function registerWindowActivitiesHandlers() {
                     windowActivities.url,
                     windowActivities.windowTitle
                 )
-                .orderBy(desc(totalDuration))
+                .orderBy(sql`SUM(${windowActivities.durationSeconds}) DESC`)
 
             return stats
         } catch (error) {
