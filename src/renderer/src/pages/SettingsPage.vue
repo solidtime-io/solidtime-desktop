@@ -89,11 +89,6 @@ function closeManualInstructions() {
 function reopenPermissionModal() {
     showPermissionModal.value = true
 }
-
-async function checkPermissionStatus() {
-    hasPermission.value = await window.electronAPI.checkScreenRecordingPermission()
-}
-
 async function confirmDeleteWindowActivities() {
     isDeletingWindowActivities.value = true
     try {
@@ -254,8 +249,8 @@ watch(activityTrackingEnabled, (enabled) => {
                                 enabled but window titles may not be captured.
                             </p>
                             <SecondaryButton
-                                @click="reopenPermissionModal"
-                                class="text-xs py-1 px-2">
+                                class="text-xs py-1 px-2"
+                                @click="reopenPermissionModal">
                                 Grant Permission
                             </SecondaryButton>
                         </div>
@@ -293,8 +288,8 @@ watch(activityTrackingEnabled, (enabled) => {
                             </div>
                         </div>
                         <SecondaryButton
-                            @click="showDeleteWindowActivitiesModal = true"
-                            class="text-red-500 hover:text-red-600">
+                            class="text-red-500 hover:text-red-600"
+                            @click="showDeleteWindowActivitiesModal = true">
                             Delete All
                         </SecondaryButton>
                     </div>
@@ -306,8 +301,8 @@ watch(activityTrackingEnabled, (enabled) => {
                             </div>
                         </div>
                         <SecondaryButton
-                            @click="showDeleteActivityPeriodsModal = true"
-                            class="text-red-500 hover:text-red-600">
+                            class="text-red-500 hover:text-red-600"
+                            @click="showDeleteActivityPeriodsModal = true">
                             Delete All
                         </SecondaryButton>
                     </div>
@@ -317,8 +312,8 @@ watch(activityTrackingEnabled, (enabled) => {
                             <div class="text-xs text-muted">Clear cached application icons</div>
                         </div>
                         <SecondaryButton
-                            @click="showDeleteIconCacheModal = true"
-                            class="text-red-500 hover:text-red-600">
+                            class="text-red-500 hover:text-red-600"
+                            @click="showDeleteIconCacheModal = true">
                             Clear Cache
                         </SecondaryButton>
                     </div>
@@ -432,14 +427,14 @@ watch(activityTrackingEnabled, (enabled) => {
         <div
             class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
             <SecondaryButton
-                @click="showDeleteWindowActivitiesModal = false"
                 :disabled="isDeletingWindowActivities"
+                @click="showDeleteWindowActivitiesModal = false"
                 >Cancel</SecondaryButton
             >
             <PrimaryButton
-                @click="confirmDeleteWindowActivities"
                 :disabled="isDeletingWindowActivities"
-                class="bg-red-600 hover:bg-red-700">
+                class="bg-red-600 hover:bg-red-700"
+                @click="confirmDeleteWindowActivities">
                 <div class="flex items-center">
                     <LoadingSpinner v-if="isDeletingWindowActivities"></LoadingSpinner>
                     <span>{{ isDeletingWindowActivities ? 'Deleting...' : 'Delete All' }}</span>
@@ -471,14 +466,14 @@ watch(activityTrackingEnabled, (enabled) => {
         <div
             class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
             <SecondaryButton
-                @click="showDeleteActivityPeriodsModal = false"
                 :disabled="isDeletingActivityPeriods"
+                @click="showDeleteActivityPeriodsModal = false"
                 >Cancel</SecondaryButton
             >
             <PrimaryButton
-                @click="confirmDeleteActivityPeriods"
                 :disabled="isDeletingActivityPeriods"
-                class="bg-red-600 hover:bg-red-700">
+                class="bg-red-600 hover:bg-red-700"
+                @click="confirmDeleteActivityPeriods">
                 <div class="flex items-center">
                     <LoadingSpinner v-if="isDeletingActivityPeriods"></LoadingSpinner>
                     <span>{{ isDeletingActivityPeriods ? 'Deleting...' : 'Delete All' }}</span>
@@ -510,11 +505,11 @@ watch(activityTrackingEnabled, (enabled) => {
         <div
             class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
             <SecondaryButton
-                @click="showDeleteIconCacheModal = false"
                 :disabled="isDeletingIconCache"
+                @click="showDeleteIconCacheModal = false"
                 >Cancel</SecondaryButton
             >
-            <PrimaryButton @click="confirmDeleteIconCache" :disabled="isDeletingIconCache">
+            <PrimaryButton :disabled="isDeletingIconCache" @click="confirmDeleteIconCache">
                 <div class="flex items-center">
                     <LoadingSpinner v-if="isDeletingIconCache"></LoadingSpinner>
                     <span>{{ isDeletingIconCache ? 'Clearing...' : 'Clear Cache' }}</span>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, systemPreferences, desktopCapturer } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/linux_icon.png?asset'
@@ -118,7 +118,6 @@ app.whenReady().then(async () => {
 
     // Screen recording permission handlers
     ipcMain.handle('checkScreenRecordingPermission', async () => {
-        const { systemPreferences } = require('electron')
         if (process.platform === 'darwin') {
             const status = systemPreferences.getMediaAccessStatus('screen')
             return status === 'granted'
@@ -127,7 +126,6 @@ app.whenReady().then(async () => {
     })
 
     ipcMain.handle('requestScreenRecordingPermission', async () => {
-        const { desktopCapturer, systemPreferences } = require('electron')
         if (process.platform === 'darwin') {
             try {
                 // Invoke desktopCapturer to trigger the macOS permission prompt
