@@ -6,6 +6,7 @@ import {
     isTrayTimerActivated,
     idleDetectionEnabled,
     idleThresholdMinutes,
+    activityTrackingEnabled,
 } from '../utils/settings.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
@@ -62,6 +63,11 @@ watch(idleDetectionEnabled, (enabled) => {
 watch(idleThresholdMinutes, (minutes) => {
     window.electronAPI.updateIdleThreshold(minutes)
 })
+
+// Watch for activity tracking setting changes and notify main process
+watch(activityTrackingEnabled, (enabled) => {
+    window.electronAPI.updateActivityTrackingEnabled(enabled)
+})
 </script>
 
 <template>
@@ -116,6 +122,19 @@ watch(idleThresholdMinutes, (minutes) => {
                             min="1"
                             max="60"
                             class="w-20 px-2 py-1 text-sm bg-card-background border border-card-background-separator rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <label class="flex items-center">
+                        <Checkbox
+                            v-model:checked="activityTrackingEnabled"
+                            name="activityTracking" />
+                        <span class="ms-2 text-sm">Enable Activity Tracking</span>
+                    </label>
+                    <div v-if="activityTrackingEnabled" class="ml-6 text-xs text-muted">
+                        Tracks the active window and application to show detailed activity in the
+                        calendar.
+                        <span class="text-yellow-600"
+                            >Note: Requires Screen Recording permission on macOS.</span
+                        >
                     </div>
                 </div>
             </div>

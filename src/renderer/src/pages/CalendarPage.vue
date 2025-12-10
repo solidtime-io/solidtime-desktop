@@ -254,29 +254,31 @@ const activityPeriods = computed<ActivityPeriod[]>(() => {
 </script>
 
 <template>
-    <div class="flex-1 h-full">
+    <div class="flex-1 h-full flex flex-col">
         <div v-if="!currentOrganizationLoaded" class="flex items-center justify-center h-full">
             <LoadingSpinner />
         </div>
-        <TimeEntryCalendar
-            v-else
-            :time-entries="currentTimeEntries"
-            :projects="projects"
-            :tasks="tasks"
-            :clients="clients"
-            :tags="tags"
-            :activity-periods="activityPeriods"
-            :loading="timeEntriesLoading"
-            :enable-estimated-time="false"
-            :currency="currentMembership?.organization?.currency || 'USD'"
-            :can-create-project="true"
-            :create-time-entry="createTimeEntry"
-            :update-time-entry="updateTimeEntry"
-            :delete-time-entry="deleteTimeEntry"
-            :create-client="createClient"
-            :create-project="createProject"
-            :create-tag="createTag"
-            @dates-change="onDatesChange"
-            @refresh="onRefresh" />
+        <template v-else>
+            <TimeEntryCalendar
+                class="flex-1"
+                :timeEntries="currentTimeEntries"
+                :projects="projects"
+                :tasks="tasks"
+                :clients="clients"
+                :tags="tags"
+                :activityPeriods="activityPeriods"
+                :loading="timeEntriesLoading"
+                :enableEstimatedTime="false"
+                :currency="currentMembership?.organization?.currency || 'USD'"
+                :canCreateProject="true"
+                :createTimeEntry="createTimeEntry"
+                :updateTimeEntry="updateTimeEntry"
+                :deleteTimeEntry="deleteTimeEntry"
+                :createClient="createClient"
+                :createProject="createProject"
+                :createTag="createTag"
+                @dates-change="onDatesChange"
+                @refresh="onRefresh" />
+        </template>
     </div>
 </template>

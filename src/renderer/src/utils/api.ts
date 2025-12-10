@@ -1,12 +1,6 @@
 import { createApiClient } from '@solidtime/api'
 import { computed } from 'vue'
 import { accessToken, endpoint, refreshAccessToken, refreshToken } from './oauth'
-import {
-    type AxiosRequestConfig,
-    type AxiosResponse,
-    type AxiosError,
-    type InternalAxiosRequestConfig,
-} from 'axios'
 
 export const apiClient = computed(() => {
     const client = createApiClient(endpoint.value + '/api', {
@@ -16,19 +10,19 @@ export const apiClient = computed(() => {
     const axiosInstance = client.axios
 
     axiosInstance.interceptors.request.use(
-        (config: InternalAxiosRequestConfig) => {
+        (config) => {
             if (accessToken.value) {
                 config.headers.Authorization = `Bearer ${accessToken.value}`
             }
             return config
         },
-        (error: AxiosError) => Promise.reject(error)
+        (error) => Promise.reject(error)
     )
 
     axiosInstance.interceptors.response.use(
-        (response: AxiosResponse) => response,
-        async (error: AxiosError) => {
-            const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
+        (response) => response,
+        async (error) => {
+            const originalRequest = error.config
 
             if (
                 error.response?.status === 401 &&

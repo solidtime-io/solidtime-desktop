@@ -14,7 +14,7 @@ const currentOrganization = computed(() => {
 <template>
     <SelectDropdown
         v-model="currentMembershipId"
-        align="bottom-end"
+        align="end"
         :getKeyFromItem="(item: MyMembership) => item.id"
         :getNameForItem="(item: MyMembership) => item.organization.name"
         :items="memberships">

@@ -1,15 +1,24 @@
 import { ipcMain } from 'electron'
 import { db } from './db/client'
-import { activityPeriods } from './db/schema'
-import { gte, lte, and } from 'drizzle-orm'
+import { activityPeriods, windowActivities } from './db/schema'
+import { gte, lte, and, sql } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
 import { getCurrentActivityPeriod } from './idleMonitor'
+import { getAppIcon } from './appIcons'
 
 // Type definitions for activity period responses
+interface WindowActivityInPeriod {
+    appName: string
+    url: string | null
+    count: number
+    icon?: string | null
+}
+
 interface ActivityPeriodResponse {
     start: string
     end: string
     isIdle: boolean
+    windowActivities?: WindowActivityInPeriod[]
 }
 
 interface ActivityPeriodsResult {
@@ -36,6 +45,53 @@ function isValidISODate(dateString: unknown): dateString is string {
 
     // Verify the string can be parsed back to the same value
     return date.toISOString() !== 'Invalid Date'
+}
+
+/**
+ * Fetches window activities for a specific activity period
+ */
+async function getWindowActivitiesForPeriod(
+    periodStart: string,
+    periodEnd: string
+): Promise<WindowActivityInPeriod[]> {
+    try {
+        const activities = await db
+            .select({
+                appName: windowActivities.appName,
+                url: windowActivities.url,
+                count: sql<number>`SUM(${windowActivities.durationSeconds})`,
+            })
+            .from(windowActivities)
+            .where(
+                and(
+                    gte(windowActivities.timestamp, periodStart),
+                    lte(windowActivities.timestamp, periodEnd)
+                )
+            )
+            .groupBy(windowActivities.appName, windowActivities.url)
+            .orderBy(sql`SUM(${windowActivities.durationSeconds}) DESC`)
+
+        // Get unique app names
+        const uniqueAppNames = [...new Set(activities.map((a) => a.appName))]
+
+        // Fetch icons for all unique apps
+        const iconPromises = uniqueAppNames.map(async (appName) => ({
+            appName,
+            icon: await getAppIcon(appName),
+        }))
+        const iconResults = await Promise.all(iconPromises)
+        const iconMap = new Map(iconResults.map((r) => [r.appName, r.icon]))
+
+        return activities.map((activity) => ({
+            appName: activity.appName,
+            url: activity.url,
+            count: Number(activity.count),
+            icon: iconMap.get(activity.appName) || null,
+        }))
+    } catch (error) {
+        console.error('Failed to get window activities for period:', error)
+        return []
+    }
 }
 
 /**
@@ -77,18 +133,32 @@ async function getActivityPeriods(
             .where(and(gte(activityPeriods.start, startDate), lte(activityPeriods.end, endDate)))
             .orderBy(activityPeriods.start)
 
-        // Validate returned data structure
-        const validatedPeriods: ActivityPeriodResponse[] = periods.map((period) => {
-            if (!isValidISODate(period.start) || !isValidISODate(period.end)) {
-                throw new Error(`Invalid date format in database record: ${JSON.stringify(period)}`)
-            }
+        // Validate returned data structure and fetch window activities for each period
+        const validatedPeriods: ActivityPeriodResponse[] = await Promise.all(
+            periods.map(async (period) => {
+                if (!isValidISODate(period.start) || !isValidISODate(period.end)) {
+                    throw new Error(
+                        `Invalid date format in database record: ${JSON.stringify(period)}`
+                    )
+                }
 
-            return {
-                start: period.start,
-                end: period.end,
-                isIdle: Boolean(period.isIdle),
-            }
-        })
+                // Fetch window activities for this period
+                const windowActivitiesForPeriod = await getWindowActivitiesForPeriod(
+                    period.start,
+                    period.end
+                )
+
+                return {
+                    start: period.start,
+                    end: period.end,
+                    isIdle: Boolean(period.isIdle),
+                    windowActivities:
+                        windowActivitiesForPeriod.length > 0
+                            ? windowActivitiesForPeriod
+                            : undefined,
+                }
+            })
+        )
 
         // Include the current ongoing activity period if it exists and overlaps with the requested range
         const currentPeriod = getCurrentActivityPeriod()
@@ -98,10 +168,20 @@ async function getActivityPeriods(
 
             // Check if current period overlaps with requested date range
             if (currentEnd >= startDateTime && currentStart <= endDateTime) {
+                // Fetch window activities for the current period
+                const windowActivitiesForCurrentPeriod = await getWindowActivitiesForPeriod(
+                    currentPeriod.start,
+                    currentPeriod.end
+                )
+
                 validatedPeriods.push({
                     start: currentPeriod.start,
                     end: currentPeriod.end,
                     isIdle: currentPeriod.isIdle,
+                    windowActivities:
+                        windowActivitiesForCurrentPeriod.length > 0
+                            ? windowActivitiesForCurrentPeriod
+                            : undefined,
                 })
             }
         }

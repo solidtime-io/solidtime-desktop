@@ -27,26 +27,6 @@ export function isValidUTCTimestamp(timestamp: string): boolean {
     )
 }
 
-/**
- * Ensures a timestamp is in UTC format, converting if necessary
- */
-export function ensureUTCTimestamp(timestamp: string | Date): string {
-    if (timestamp instanceof Date) {
-        return timestamp.toISOString()
-    }
-
-    if (!isValidUTCTimestamp(timestamp)) {
-        // Try to parse and convert to UTC
-        const date = new Date(timestamp)
-        if (isNaN(date.getTime())) {
-            throw new Error(`Invalid timestamp: ${timestamp}`)
-        }
-        return date.toISOString()
-    }
-
-    return timestamp
-}
-
 export const activityPeriods = sqliteTable('activity_periods', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     start: text('start').notNull(), // ISO 8601 UTC timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)
@@ -98,3 +78,43 @@ export const settings = sqliteTable('settings', {
 
 export type Setting = typeof settings.$inferSelect
 export type NewSetting = typeof settings.$inferInsert
+
+/**
+ * Window activities table for tracking active application windows
+ */
+export const windowActivities = sqliteTable('window_activities', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    timestamp: text('timestamp').notNull(), // ISO 8601 UTC timestamp (start time of activity)
+    durationSeconds: integer('duration_seconds').notNull(), // Duration in seconds
+    appName: text('app_name').notNull(), // Application name (e.g., "Google Chrome", "Visual Studio Code")
+    windowTitle: text('window_title').notNull(), // Window title
+    url: text('url'), // URL if available (for browsers)
+    processId: integer('process_id'), // Process ID
+    createdAt: text('created_at')
+        .notNull()
+        .$defaultFn(() => new Date().toISOString()),
+})
+
+export type WindowActivity = typeof windowActivities.$inferSelect
+export type NewWindowActivity = typeof windowActivities.$inferInsert
+
+/**
+ * Validates a NewWindowActivity object before insertion
+ */
+export function validateNewWindowActivity(activity: NewWindowActivity): void {
+    if (!isValidUTCTimestamp(activity.timestamp)) {
+        throw new Error(`Invalid timestamp format. Expected UTC ISO 8601: ${activity.timestamp}`)
+    }
+
+    if (typeof activity.durationSeconds !== 'number' || activity.durationSeconds < 0) {
+        throw new Error('Duration must be a non-negative number')
+    }
+
+    if (!activity.appName || activity.appName.trim().length === 0) {
+        throw new Error('Application name is required')
+    }
+
+    if (!activity.windowTitle || activity.windowTitle.trim().length === 0) {
+        throw new Error('Window title is required')
+    }
+}

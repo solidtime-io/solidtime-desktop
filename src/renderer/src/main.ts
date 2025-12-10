@@ -67,14 +67,14 @@ import { focusManager } from '@tanstack/vue-query'
 focusManager.setEventListener((handleFocus) => {
     // Listen to visibilitychange and focus
     if (typeof window !== 'undefined' && window.addEventListener) {
-        window.addEventListener('visibilitychange', handleFocus, false)
-        window.addEventListener('focus', handleFocus, false)
+        window.document.addEventListener('visibilitychange', () => handleFocus(), false)
+        window.addEventListener('focus', () => handleFocus(), false)
     }
 
     return () => {
         // Be sure to unsubscribe if a new handler is set
-        window.removeEventListener('visibilitychange', handleFocus)
-        window.removeEventListener('focus', handleFocus)
+        window.document.removeEventListener('visibilitychange', () => handleFocus())
+        window.removeEventListener('focus', () => handleFocus())
     }
 })
 
