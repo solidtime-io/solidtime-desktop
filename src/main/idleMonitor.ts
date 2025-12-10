@@ -5,7 +5,7 @@ import utc from 'dayjs/plugin/utc'
 import duration from 'dayjs/plugin/duration'
 import type { Dayjs } from 'dayjs'
 import { db } from './db/client'
-import { activityPeriods, validateNewActivityPeriod, ensureUTCTimestamp } from './db/schema'
+import { activityPeriods, validateNewActivityPeriod } from './db/schema'
 import { getAppSettings } from './settings'
 
 // Configure dayjs for main process
@@ -191,13 +191,9 @@ function startIdleMonitoring() {
 
 async function saveActivityPeriod(start: string, end: string, isIdlePeriod: boolean) {
     try {
-        // Ensure timestamps are in proper UTC format
-        const utcStart = ensureUTCTimestamp(start)
-        const utcEnd = ensureUTCTimestamp(end)
-
         const newPeriod = {
-            start: utcStart,
-            end: utcEnd,
+            start,
+            end,
             isIdle: isIdlePeriod,
         }
 
@@ -205,7 +201,7 @@ async function saveActivityPeriod(start: string, end: string, isIdlePeriod: bool
         validateNewActivityPeriod(newPeriod)
 
         await db.insert(activityPeriods).values(newPeriod)
-        console.log(`Saved ${isIdlePeriod ? 'idle' : 'active'} period: ${utcStart} to ${utcEnd}`)
+        console.log(`Saved ${isIdlePeriod ? 'idle' : 'active'} period: ${start} to ${end}`)
     } catch (error) {
         console.error('Failed to save activity period:', error)
         // Log detailed error for debugging

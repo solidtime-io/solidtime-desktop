@@ -9,7 +9,7 @@ const dbPath = path.join(app.getPath('userData'), 'solidtime.db')
 
 // Create libsql client using file:// protocol for local SQLite
 const client = createClient({
-  url: `file:${dbPath}`
+    url: `file:${dbPath}`,
 })
 
 export const db = drizzle(client, { schema })

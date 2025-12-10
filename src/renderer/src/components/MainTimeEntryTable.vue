@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQuery, useInfiniteQuery } from '@tanstack/vue-query'
-import { type Component, computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
+import { type Component, computed, onMounted, ref, watch, watchEffect } from 'vue'
 
 import {
     TimeEntryGroupedTable,
@@ -12,12 +12,9 @@ import {
 } from '@solidtime/ui'
 import {
     emptyTimeEntry,
-    getAllTimeEntries,
     getCurrentTimeEntry,
     getTimeEntriesPage,
-    useTimeEntryCreateMutation,
     useTimeEntryDeleteMutation,
-    useTimeEntryStopMutation,
     useCurrentTimeEntryUpdateMutation,
     useTimeEntriesUpdateMutation,
     useTimeEntryUpdateMutation,
@@ -40,7 +37,7 @@ import { LoadingSpinner } from '@solidtime/ui'
 import { useLiveTimer } from '../utils/liveTimer.ts'
 import { ClockIcon } from '@heroicons/vue/20/solid'
 import { CardTitle } from '@solidtime/ui'
-import { useStorage, useElementVisibility } from '@vueuse/core'
+import { useElementVisibility } from '@vueuse/core'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { getAllClients, useClientCreateMutation } from '../utils/clients.ts'
 import { dayjs } from '../utils/dayjs.ts'
@@ -48,9 +45,7 @@ import { fromError } from 'zod-validation-error'
 import { apiClient } from '../utils/api'
 import { updateTrayState } from '../utils/tray'
 import { isTrayTimerActivated } from '../utils/settings'
-import { time } from '@solidtime/ui'
 import { useTimer } from '../utils/useTimer.ts'
-const { getDayJsInstance } = time
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
@@ -163,12 +158,12 @@ function createTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
     timeEntryCreate.mutate(updatedTimeEntry)
 }
 
-function createManualTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
+async function createManualTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
     const updatedTimeEntry = {
         ...timeEntry,
         member_id: currentMembershipId.value,
     } as CreateTimeEntryBody
-    timeEntryCreate.mutate(updatedTimeEntry)
+    await timeEntryCreate.mutateAsync(updatedTimeEntry)
 }
 
 async function createTag(newTagName: string): Promise<Tag | undefined> {
@@ -300,7 +295,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
         <div
             v-if="timeEntries && projects && tasks && tags && clients"
             class="flex flex-col h-full">
-            <div class="flex bg-background">
+            <div class="flex bg-primary dark:bg-background">
                 <div class="pl-4 pb-4 pt-4 border-b border-border-primary z-10 w-full top-0 left-0">
                     <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
                     <div class="relative">
@@ -336,12 +331,14 @@ watch(isLoadMoreVisible, async (isVisible) => {
                 </div>
                 <div class="flex justify-center items-center pt-5 group pr-4">
                     <TimeTrackerMoreOptionsDropdown
-                        :has-active-timer="isActive"
+                        :hasActiveTimer="isActive"
                         @manual-entry="showManualTimeEntryModal = true"
                         @discard="discardTimer" />
                     <TimeEntryCreateModal
                         v-model:show="showManualTimeEntryModal"
                         :enableEstimatedTime="false"
+                        :currency
+                        :canCreateProject="canCreateProjects"
                         :createProject="createProject"
                         :createClient="createClient"
                         :createTag="createTag"
@@ -365,11 +362,12 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     :projects
                     :clients
                     :updateTimeEntries="
-                        (args: UpdateMultipleTimeEntriesChangeset) =>
-                            timeEntriesUpdate.mutate({
+                        async (args: UpdateMultipleTimeEntriesChangeset) => {
+                            await timeEntriesUpdate.mutateAsync({
                                 ids: selectedTimeEntries.map((timeEntry) => timeEntry.id),
                                 changes: args,
                             })
+                        }
                     "
                     :createProject
                     :createClient

@@ -59,7 +59,7 @@ export function getTimeEntriesPage(
     }
 
     const queries: {
-        only_full_dates: string
+        only_full_dates: 'true' | 'false'
         member_id: string
         end?: string
     } = {

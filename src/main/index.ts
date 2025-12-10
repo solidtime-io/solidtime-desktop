@@ -12,8 +12,12 @@ import { initializeIdleMonitor } from './idleMonitor'
 import { runMigrations } from './db/migrate'
 import { registerActivityPeriodListeners } from './activityPeriods'
 import { registerSettingsListeners } from './settings'
+import { initializeActivityTracker, stopActivityTracking } from './activityTracker'
+import { registerWindowActivitiesHandlers } from './windowActivities'
+import { registerAppIconHandlers } from './appIcons'
 import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
+import { stopIdleMonitoring } from './idleMonitor'
 
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
@@ -109,9 +113,12 @@ app.whenReady().then(async () => {
     // Register IPC handlers
     registerActivityPeriodListeners()
     registerSettingsListeners()
+    registerWindowActivitiesHandlers()
+    registerAppIconHandlers()
 
     createWindow()
     await initializeIdleMonitor()
+    await initializeActivityTracker()
 
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the
@@ -126,6 +133,33 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit()
+    }
+})
+
+// Save active periods before the app quits
+app.on('before-quit', async (event) => {
+    event.preventDefault()
+
+    try {
+        console.log('App quitting - saving active periods...')
+
+        // Create a promise that rejects after 5 seconds
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Save operation timeout after 5 seconds')), 5000)
+        })
+
+        // Race the save operations against the timeout
+        const savePromise = Promise.all([stopActivityTracking(), stopIdleMonitoring()])
+
+        await Promise.race([savePromise, timeoutPromise])
+
+        console.log('Active periods saved successfully')
+    } catch (error) {
+        console.error('Error saving active periods on quit:', error)
+        // Continue with quit even if save fails
+    } finally {
+        // Now allow the app to quit
+        app.exit(0)
     }
 })
 

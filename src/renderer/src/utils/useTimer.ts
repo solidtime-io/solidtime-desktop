@@ -7,9 +7,7 @@ import {
     useTimeEntryCreateMutation,
 } from './timeEntries.ts'
 import { currentMembershipId, useMyMemberships } from './myMemberships.ts'
-import { time } from '@solidtime/ui'
-
-const { getDayJsInstance } = time
+import { dayjs } from './dayjs.ts'
 
 /**
  * Composable for managing timer state and operations
@@ -62,7 +60,7 @@ export function useTimer() {
 
         await timeEntryStop.mutateAsync({
             ...stoppedTimeEntry,
-            end: endTime || getDayJsInstance()().utc().format(),
+            end: endTime || dayjs().utc().format(),
         })
     }
 
@@ -71,7 +69,7 @@ export function useTimer() {
      * Copies properties from the last time entry if available
      */
     function startTimer() {
-        const startTime = getDayJsInstance()().utc().format()
+        const startTime = dayjs().utc().format()
 
         if (lastTimeEntry.value && lastTimeEntry.value.start) {
             // Copy properties from last entry
@@ -94,7 +92,7 @@ export function useTimer() {
 
         const timeEntryToCreate: CreateTimeEntryBody = {
             ...currentTimeEntry.value,
-            member_id: currentMembershipId.value,
+            member_id: currentMembershipId.value!,
         }
         timeEntryCreate.mutate(timeEntryToCreate)
     }

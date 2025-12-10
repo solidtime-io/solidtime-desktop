@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ClockIcon, CalendarIcon, Cog6ToothIcon } from '@heroicons/vue/24/outline'
+import { ClockIcon, CalendarIcon, Cog6ToothIcon, ChartPieIcon } from '@heroicons/vue/24/outline'
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { Button, TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@solidtime/ui'
@@ -17,6 +17,11 @@ const navItems = [
         name: 'Calendar',
         path: '/calendar',
         icon: CalendarIcon,
+    },
+    {
+        name: 'Statistics',
+        path: '/statistics',
+        icon: ChartPieIcon,
     },
     {
         name: 'Settings',
@@ -41,14 +46,14 @@ function navigateTo(path: string) {
         <div
             class="w-14 bg-background border-r border-border-primary flex flex-col items-center py-3">
             <Tooltip v-for="item in navItems" :key="item.path">
-                <TooltipTrigger as-child>
+                <TooltipTrigger asChild>
                     <Button
                         variant="ghost"
-                        @click="navigateTo(item.path)"
                         :class="[
                             'transition-colors text-text-tertiary w-11 h-11 [&_svg]:size-5',
-                            isActive(item.path) && 'bg-secondary text-white shadow-xs bg-white/5',
-                        ]">
+                            isActive(item.path) && 'text-text-primary shadow-xs bg-quaternary',
+                        ]"
+                        @click="navigateTo(item.path)">
                         <component :is="item.icon" class="w-16 h-16"></component>
                     </Button>
                 </TooltipTrigger>

@@ -35,7 +35,16 @@ if (process.contextIsolated || true) {
                 ipcRenderer.send('updateIdleThreshold', thresholdMinutes),
             updateIdleDetectionEnabled: (enabled: boolean) =>
                 ipcRenderer.send('updateIdleDetectionEnabled', enabled),
+            updateActivityTrackingEnabled: (enabled: boolean) =>
+                ipcRenderer.send('updateActivityTrackingEnabled', enabled),
             timerStateChanged: (running: boolean) => ipcRenderer.send('timerStateChanged', running),
+            getWindowActivities: (startDate: string, endDate: string) =>
+                ipcRenderer.invoke('getWindowActivities', startDate, endDate),
+            getWindowActivityStats: (startDate: string, endDate: string) =>
+                ipcRenderer.invoke('getWindowActivityStats', startDate, endDate),
+            getAppIcon: (appName: string) => ipcRenderer.invoke('getAppIcon', appName),
+            getAppIcons: (appNames: string[]) => ipcRenderer.invoke('getAppIcons', appNames),
+            clearIconCache: () => ipcRenderer.invoke('clearIconCache'),
             onIdleDialogResponse: (callback) => {
                 const listener = (_event, value) => callback(value)
                 ipcRenderer.on('idleDialogResponse', listener)

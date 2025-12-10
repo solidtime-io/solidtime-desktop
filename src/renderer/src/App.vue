@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PrimaryButton, time, TimeTrackerStartStop } from '@solidtime/ui'
+import { PrimaryButton, time } from '@solidtime/ui'
 import { Cog6ToothIcon } from '@heroicons/vue/16/solid'
 
 declare global {
@@ -9,7 +9,6 @@ declare global {
     }
 }
 
-import { VueQueryDevtools } from '@tanstack/vue-query-devtools'
 import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
 import { useQueryClient, useQuery } from '@tanstack/vue-query'
 
@@ -161,7 +160,7 @@ whenever(cmdComma, () => {
                     <OrganizationSwitcher></OrganizationSwitcher>
                 </div>
             </div>
-            <div class="flex-1 flex flex-col overflow-hidden" v-if="isLoggedIn">
+            <div v-if="isLoggedIn" class="flex-1 flex flex-col overflow-hidden">
                 <div class="flex-1 flex overflow-hidden">
                     <SidebarNavigation />
                     <router-view v-slot="{ Component }">

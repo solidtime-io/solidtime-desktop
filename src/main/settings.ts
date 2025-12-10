@@ -10,6 +10,7 @@ export interface AppSettings {
     trayTimerActivated: boolean
     idleDetectionEnabled: boolean
     idleThresholdMinutes: number
+    activityTrackingEnabled: boolean
 }
 
 // Default settings
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     trayTimerActivated: true,
     idleDetectionEnabled: true,
     idleThresholdMinutes: 5,
+    activityTrackingEnabled: false, // Off by default for privacy
 }
 
 // Setting keys used in the database
@@ -26,6 +28,7 @@ const SETTING_KEYS = {
     TRAY_TIMER_ACTIVATED: 'tray_timer_activated',
     IDLE_DETECTION_ENABLED: 'idle_detection_enabled',
     IDLE_THRESHOLD_MINUTES: 'idle_threshold_minutes',
+    ACTIVITY_TRACKING_ENABLED: 'activity_tracking_enabled',
 } as const
 
 /**
@@ -33,11 +36,7 @@ const SETTING_KEYS = {
  */
 async function getSetting(key: string): Promise<string | null> {
     try {
-        const result = await db
-            .select()
-            .from(settings)
-            .where(eq(settings.key, key))
-            .limit(1)
+        const result = await db.select().from(settings).where(eq(settings.key, key)).limit(1)
 
         return result[0]?.value ?? null
     } catch (error) {
@@ -89,13 +88,19 @@ async function setSetting(key: string, value: string): Promise<void> {
  */
 export async function getAppSettings(): Promise<AppSettings> {
     try {
-        const [widgetActivated, trayTimerActivated, idleDetectionEnabled, idleThresholdMinutes] =
-            await Promise.all([
-                getSetting(SETTING_KEYS.WIDGET_ACTIVATED),
-                getSetting(SETTING_KEYS.TRAY_TIMER_ACTIVATED),
-                getSetting(SETTING_KEYS.IDLE_DETECTION_ENABLED),
-                getSetting(SETTING_KEYS.IDLE_THRESHOLD_MINUTES),
-            ])
+        const [
+            widgetActivated,
+            trayTimerActivated,
+            idleDetectionEnabled,
+            idleThresholdMinutes,
+            activityTrackingEnabled,
+        ] = await Promise.all([
+            getSetting(SETTING_KEYS.WIDGET_ACTIVATED),
+            getSetting(SETTING_KEYS.TRAY_TIMER_ACTIVATED),
+            getSetting(SETTING_KEYS.IDLE_DETECTION_ENABLED),
+            getSetting(SETTING_KEYS.IDLE_THRESHOLD_MINUTES),
+            getSetting(SETTING_KEYS.ACTIVITY_TRACKING_ENABLED),
+        ])
 
         return {
             widgetActivated:
@@ -114,6 +119,10 @@ export async function getAppSettings(): Promise<AppSettings> {
                 idleThresholdMinutes !== null
                     ? parseInt(idleThresholdMinutes, 10)
                     : DEFAULT_SETTINGS.idleThresholdMinutes,
+            activityTrackingEnabled:
+                activityTrackingEnabled !== null
+                    ? activityTrackingEnabled === 'true'
+                    : DEFAULT_SETTINGS.activityTrackingEnabled,
         }
     } catch (error) {
         console.error('Failed to get app settings, using defaults:', error)
@@ -135,10 +144,7 @@ export async function updateAppSettings(
 
         if (partialSettings.widgetActivated !== undefined) {
             promises.push(
-                setSetting(
-                    SETTING_KEYS.WIDGET_ACTIVATED,
-                    String(partialSettings.widgetActivated)
-                )
+                setSetting(SETTING_KEYS.WIDGET_ACTIVATED, String(partialSettings.widgetActivated))
             )
         }
 
@@ -165,6 +171,15 @@ export async function updateAppSettings(
                 setSetting(
                     SETTING_KEYS.IDLE_THRESHOLD_MINUTES,
                     String(partialSettings.idleThresholdMinutes)
+                )
+            )
+        }
+
+        if (partialSettings.activityTrackingEnabled !== undefined) {
+            promises.push(
+                setSetting(
+                    SETTING_KEYS.ACTIVITY_TRACKING_ENABLED,
+                    String(partialSettings.activityTrackingEnabled)
                 )
             )
         }

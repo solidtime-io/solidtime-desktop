@@ -15,6 +15,27 @@
             "when": 1731945600000,
             "tag": "0001_add_settings_table",
             "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "6",
+            "when": 1732637165000,
+            "tag": "0002_add_window_activities_table",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "6",
+            "when": 1733245200000,
+            "tag": "0003_add_duration_to_window_activities",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "6",
+            "when": 1733340000000,
+            "tag": "0004_remove_bundle_id",
+            "breakpoints": true
         }
     ]
 }

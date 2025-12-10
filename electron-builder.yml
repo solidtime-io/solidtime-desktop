@@ -11,6 +11,9 @@ files:
     - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
     - resources/**
+extraResources:
+    - from: drizzle
+      to: drizzle
 protocols:
     name: solidtime
     schemes:
@@ -34,6 +37,7 @@ mac:
         - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
         - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
         - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+        - NSScreenCaptureUsageDescription: Application requests access to screen recording to track window activity for time tracking purposes.
     notarize: true
 dmg:
     artifactName: ${name}-${arch}.${ext}
