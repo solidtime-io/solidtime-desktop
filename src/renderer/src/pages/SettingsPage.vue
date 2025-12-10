@@ -28,6 +28,12 @@ const showPermissionModal = ref(false)
 const showManualInstructionsModal = ref(false)
 const showGrantPermissionButton = ref(false)
 const hasPermission = ref(false)
+const showDeleteWindowActivitiesModal = ref(false)
+const showDeleteActivityPeriodsModal = ref(false)
+const showDeleteIconCacheModal = ref(false)
+const isDeletingWindowActivities = ref(false)
+const isDeletingActivityPeriods = ref(false)
+const isDeletingIconCache = ref(false)
 const myData = computed(() => data.value?.data)
 
 function onLogoutClick() {
@@ -86,6 +92,57 @@ function reopenPermissionModal() {
 
 async function checkPermissionStatus() {
     hasPermission.value = await window.electronAPI.checkScreenRecordingPermission()
+}
+
+async function confirmDeleteWindowActivities() {
+    isDeletingWindowActivities.value = true
+    try {
+        const result = await window.electronAPI.deleteAllWindowActivities()
+        if (result.success) {
+            console.log('Window activities deleted successfully')
+        } else {
+            console.error('Failed to delete window activities:', result.error)
+        }
+    } catch (error) {
+        console.error('Error deleting window activities:', error)
+    } finally {
+        isDeletingWindowActivities.value = false
+        showDeleteWindowActivitiesModal.value = false
+    }
+}
+
+async function confirmDeleteActivityPeriods() {
+    isDeletingActivityPeriods.value = true
+    try {
+        const result = await window.electronAPI.deleteAllActivityPeriods()
+        if (result.success) {
+            console.log('Activity periods deleted successfully')
+        } else {
+            console.error('Failed to delete activity periods:', result.error)
+        }
+    } catch (error) {
+        console.error('Error deleting activity periods:', error)
+    } finally {
+        isDeletingActivityPeriods.value = false
+        showDeleteActivityPeriodsModal.value = false
+    }
+}
+
+async function confirmDeleteIconCache() {
+    isDeletingIconCache.value = true
+    try {
+        const result = await window.electronAPI.clearIconCache()
+        if (result.success) {
+            console.log('Icon cache cleared successfully')
+        } else {
+            console.error('Failed to clear icon cache')
+        }
+    } catch (error) {
+        console.error('Error clearing icon cache:', error)
+    } finally {
+        isDeletingIconCache.value = false
+        showDeleteIconCacheModal.value = false
+    }
 }
 
 onMounted(async () => {
@@ -206,7 +263,8 @@ watch(activityTrackingEnabled, (enabled) => {
                 </div>
             </div>
 
-            <div class="bg-card-background rounded-lg border border-card-background-separator p-6">
+            <div
+                class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div class="flex items-center space-x-4">
                     <SecondaryButton :disabled="checkingForUpdate" @click="triggerUpdate">
@@ -220,6 +278,49 @@ watch(activityTrackingEnabled, (enabled) => {
                         <span v-if="showErrorOnUpdateRequest"
                             >There was an error while fetching the update.</span
                         >
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-card-background rounded-lg border border-card-background-separator p-6">
+                <div class="mb-4 text-lg font-medium">Data Management</div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium">Window Activities</div>
+                            <div class="text-xs text-muted">
+                                Delete all tracked window activities and application usage data
+                            </div>
+                        </div>
+                        <SecondaryButton
+                            @click="showDeleteWindowActivitiesModal = true"
+                            class="text-red-500 hover:text-red-600">
+                            Delete All
+                        </SecondaryButton>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium">Activity Periods</div>
+                            <div class="text-xs text-muted">
+                                Delete all idle and active period records
+                            </div>
+                        </div>
+                        <SecondaryButton
+                            @click="showDeleteActivityPeriodsModal = true"
+                            class="text-red-500 hover:text-red-600">
+                            Delete All
+                        </SecondaryButton>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium">Icon Cache</div>
+                            <div class="text-xs text-muted">Clear cached application icons</div>
+                        </div>
+                        <SecondaryButton
+                            @click="showDeleteIconCacheModal = true"
+                            class="text-red-500 hover:text-red-600">
+                            Clear Cache
+                        </SecondaryButton>
                     </div>
                 </div>
             </div>
@@ -305,6 +406,120 @@ watch(activityTrackingEnabled, (enabled) => {
         <div
             class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
             <PrimaryButton @click="closeManualInstructions">Got It</PrimaryButton>
+        </div>
+    </Modal>
+
+    <!-- Delete Window Activities Confirmation Modal -->
+    <Modal
+        :show="showDeleteWindowActivitiesModal"
+        :maxWidth="'2xl'"
+        :closeable="!isDeletingWindowActivities"
+        @close="showDeleteWindowActivitiesModal = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-white mb-4" role="heading">
+                Delete Window Activities
+            </div>
+
+            <div class="text-sm text-muted space-y-3">
+                <p>
+                    Are you sure you want to delete all window activities? This will permanently
+                    remove all tracked application usage and window title data.
+                </p>
+                <p class="text-red-500 font-medium">This action cannot be undone.</p>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
+            <SecondaryButton
+                @click="showDeleteWindowActivitiesModal = false"
+                :disabled="isDeletingWindowActivities"
+                >Cancel</SecondaryButton
+            >
+            <PrimaryButton
+                @click="confirmDeleteWindowActivities"
+                :disabled="isDeletingWindowActivities"
+                class="bg-red-600 hover:bg-red-700">
+                <div class="flex items-center">
+                    <LoadingSpinner v-if="isDeletingWindowActivities"></LoadingSpinner>
+                    <span>{{ isDeletingWindowActivities ? 'Deleting...' : 'Delete All' }}</span>
+                </div>
+            </PrimaryButton>
+        </div>
+    </Modal>
+
+    <!-- Delete Activity Periods Confirmation Modal -->
+    <Modal
+        :show="showDeleteActivityPeriodsModal"
+        :maxWidth="'2xl'"
+        :closeable="!isDeletingActivityPeriods"
+        @close="showDeleteActivityPeriodsModal = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-white mb-4" role="heading">
+                Delete Activity Periods
+            </div>
+
+            <div class="text-sm text-muted space-y-3">
+                <p>
+                    Are you sure you want to delete all activity periods? This will permanently
+                    remove all idle and active period records.
+                </p>
+                <p class="text-red-500 font-medium">This action cannot be undone.</p>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
+            <SecondaryButton
+                @click="showDeleteActivityPeriodsModal = false"
+                :disabled="isDeletingActivityPeriods"
+                >Cancel</SecondaryButton
+            >
+            <PrimaryButton
+                @click="confirmDeleteActivityPeriods"
+                :disabled="isDeletingActivityPeriods"
+                class="bg-red-600 hover:bg-red-700">
+                <div class="flex items-center">
+                    <LoadingSpinner v-if="isDeletingActivityPeriods"></LoadingSpinner>
+                    <span>{{ isDeletingActivityPeriods ? 'Deleting...' : 'Delete All' }}</span>
+                </div>
+            </PrimaryButton>
+        </div>
+    </Modal>
+
+    <!-- Clear Icon Cache Confirmation Modal -->
+    <Modal
+        :show="showDeleteIconCacheModal"
+        :maxWidth="'2xl'"
+        :closeable="!isDeletingIconCache"
+        @close="showDeleteIconCacheModal = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-white mb-4" role="heading">Clear Icon Cache</div>
+
+            <div class="text-sm text-muted space-y-3">
+                <p>
+                    Are you sure you want to clear the icon cache? This will remove all cached
+                    application icons. They will be re-downloaded when needed.
+                </p>
+                <p class="text-xs text-muted">
+                    Note: This is a safe operation and will not delete any activity data.
+                </p>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
+            <SecondaryButton
+                @click="showDeleteIconCacheModal = false"
+                :disabled="isDeletingIconCache"
+                >Cancel</SecondaryButton
+            >
+            <PrimaryButton @click="confirmDeleteIconCache" :disabled="isDeletingIconCache">
+                <div class="flex items-center">
+                    <LoadingSpinner v-if="isDeletingIconCache"></LoadingSpinner>
+                    <span>{{ isDeletingIconCache ? 'Clearing...' : 'Clear Cache' }}</span>
+                </div>
+            </PrimaryButton>
         </div>
     </Modal>
 </template>

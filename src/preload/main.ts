@@ -57,6 +57,8 @@ if (process.contextIsolated || true) {
                 ipcRenderer.invoke('checkScreenRecordingPermission'),
             requestScreenRecordingPermission: () =>
                 ipcRenderer.invoke('requestScreenRecordingPermission'),
+            deleteAllWindowActivities: () => ipcRenderer.invoke('deleteAllWindowActivities'),
+            deleteAllActivityPeriods: () => ipcRenderer.invoke('deleteAllActivityPeriods'),
         })
     } catch (error) {
         console.error(error)

@@ -4,6 +4,23 @@ import { windowActivities } from './db/schema'
 import { and, gte, lte, sql } from 'drizzle-orm'
 
 /**
+ * Deletes all window activities from the database
+ */
+async function deleteAllWindowActivities(): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db.delete(windowActivities)
+        console.log('All window activities deleted successfully')
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to delete window activities:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+        }
+    }
+}
+
+/**
  * Registers IPC handlers for window activities
  */
 export function registerWindowActivitiesHandlers() {
@@ -57,5 +74,10 @@ export function registerWindowActivitiesHandlers() {
             console.error('Failed to get window activity stats:', error)
             return []
         }
+    })
+
+    // Delete all window activities
+    ipcMain.handle('deleteAllWindowActivities', async () => {
+        return deleteAllWindowActivities()
     })
 }

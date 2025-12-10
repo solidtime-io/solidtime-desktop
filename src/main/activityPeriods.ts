@@ -6,6 +6,23 @@ import * as Sentry from '@sentry/electron/main'
 import { getCurrentActivityPeriod } from './idleMonitor'
 import { getAppIcon } from './appIcons'
 
+/**
+ * Deletes all activity periods from the database
+ */
+async function deleteAllActivityPeriods(): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db.delete(activityPeriods)
+        console.log('All activity periods deleted successfully')
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to delete activity periods:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+        }
+    }
+}
+
 // Type definitions for activity period responses
 interface WindowActivityInPeriod {
     appName: string
@@ -209,4 +226,9 @@ export function registerActivityPeriodListeners(): void {
             return getActivityPeriods(startDate, endDate)
         }
     )
+
+    // Delete all activity periods
+    ipcMain.handle('deleteAllActivityPeriods', async () => {
+        return deleteAllActivityPeriods()
+    })
 }

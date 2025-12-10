@@ -58,6 +58,8 @@ export interface IElectronAPI {
     clearIconCache: () => Promise<{ success: boolean }>
     checkScreenRecordingPermission: () => Promise<boolean>
     requestScreenRecordingPermission: () => Promise<boolean>
+    deleteAllWindowActivities: () => Promise<{ success: boolean; error?: string }>
+    deleteAllActivityPeriods: () => Promise<{ success: boolean; error?: string }>
 }
 
 declare global {

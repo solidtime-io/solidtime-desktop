@@ -9,7 +9,6 @@ import { initializeMiniWindow, registerMiniWindowListeners } from './miniWindow'
 import { registerDeeplinkListeners } from './deeplink'
 import { registerVueDevTools } from './devtools'
 import { initializeIdleMonitor } from './idleMonitor'
-import { registerOAuthWindowListeners } from './oauthWindow'
 import { runMigrations } from './db/migrate'
 import { registerActivityPeriodListeners } from './activityPeriods'
 import { registerSettingsListeners } from './settings'
@@ -116,7 +115,6 @@ app.whenReady().then(async () => {
     registerSettingsListeners()
     registerWindowActivitiesHandlers()
     registerAppIconHandlers()
-    registerOAuthWindowListeners()
 
     // Screen recording permission handlers
     ipcMain.handle('checkScreenRecordingPermission', async () => {
