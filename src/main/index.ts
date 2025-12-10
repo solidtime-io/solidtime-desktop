@@ -9,6 +9,7 @@ import { initializeMiniWindow, registerMiniWindowListeners } from './miniWindow'
 import { registerDeeplinkListeners } from './deeplink'
 import { registerVueDevTools } from './devtools'
 import { initializeIdleMonitor } from './idleMonitor'
+import { registerOAuthWindowListeners } from './oauthWindow'
 import { runMigrations } from './db/migrate'
 import { registerActivityPeriodListeners } from './activityPeriods'
 import { registerSettingsListeners } from './settings'
@@ -115,6 +116,38 @@ app.whenReady().then(async () => {
     registerSettingsListeners()
     registerWindowActivitiesHandlers()
     registerAppIconHandlers()
+    registerOAuthWindowListeners()
+
+    // Screen recording permission handlers
+    ipcMain.handle('checkScreenRecordingPermission', async () => {
+        const { systemPreferences } = require('electron')
+        if (process.platform === 'darwin') {
+            const status = systemPreferences.getMediaAccessStatus('screen')
+            return status === 'granted'
+        }
+        return true // Non-macOS platforms don't need this permission
+    })
+
+    ipcMain.handle('requestScreenRecordingPermission', async () => {
+        const { desktopCapturer, systemPreferences } = require('electron')
+        if (process.platform === 'darwin') {
+            try {
+                // Invoke desktopCapturer to trigger the macOS permission prompt
+                await desktopCapturer.getSources({
+                    types: ['screen'],
+                    thumbnailSize: { width: 1, height: 1 },
+                })
+
+                // Check the permission status after the prompt
+                const status = systemPreferences.getMediaAccessStatus('screen')
+                return status === 'granted'
+            } catch (error) {
+                console.error('Error requesting screen recording permission:', error)
+                return false
+            }
+        }
+        return true // Non-macOS platforms don't need this permission
+    })
 
     createWindow()
     await initializeIdleMonitor()

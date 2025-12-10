@@ -53,6 +53,10 @@ if (process.contextIsolated || true) {
             },
             getSettings: () => ipcRenderer.invoke('getSettings'),
             updateSettings: (settings) => ipcRenderer.invoke('updateSettings', settings),
+            checkScreenRecordingPermission: () =>
+                ipcRenderer.invoke('checkScreenRecordingPermission'),
+            requestScreenRecordingPermission: () =>
+                ipcRenderer.invoke('requestScreenRecordingPermission'),
         })
     } catch (error) {
         console.error(error)
