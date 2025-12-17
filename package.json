@@ -1,6 +1,6 @@
 {
     "name": "solidtime",
-    "version": "0.0.48-beta",
+    "version": "0.0.49-beta",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
     "author": "solidtime.io",
@@ -32,12 +32,12 @@
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
-        "@libsql/client": "^0.15.15",
         "@miniben90/x-win": "^3.2.0",
         "@sentry/electron": "^5.7.0",
         "@sentry/vite-plugin": "^2.22.8",
         "@solidtime/api": "^0.0.6",
         "@solidtime/ui": "^0.0.15",
+        "better-sqlite3": "^11.7.0",
         "drizzle-orm": "^0.44.7",
         "electron-updater": "^6.6.2",
         "pinia": "^3.0.3",
