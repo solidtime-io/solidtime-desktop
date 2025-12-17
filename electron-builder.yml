@@ -11,6 +11,7 @@ files:
     - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
     - resources/**
+    - '**/*.node'
 extraResources:
     - from: drizzle
       to: drizzle
@@ -73,6 +74,6 @@ rpm:
     - _build_id_links none
 appImage:
     artifactName: ${name}.${ext}
-npmRebuild: false
+npmRebuild: true
 publish:
     provider: github
