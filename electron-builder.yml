@@ -1,5 +1,6 @@
 appId: io.solidtime.desktop
 productName: solidtime
+includeSubNodeModules: true
 directories:
     buildResources: build
 files:

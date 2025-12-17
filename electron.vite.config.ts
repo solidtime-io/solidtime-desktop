@@ -9,16 +9,6 @@ export default defineConfig({
     main: {
         build: {
             sourcemap: true,
-            rollupOptions: {
-                external: [
-                    // Explicitly externalize packages with native modules
-                    '@libsql/client',
-                    '@miniben90/x-win',
-                    // Externalize all platform-specific optional dependencies
-                    /^@libsql\/.*/,
-                    /^@miniben90\/.*/,
-                ],
-            },
         },
         plugins: [
             externalizeDepsPlugin(),
