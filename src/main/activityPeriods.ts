@@ -4,7 +4,6 @@ import { activityPeriods, windowActivities } from './db/schema'
 import { gte, lte, and, sql } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
 import { getCurrentActivityPeriod } from './idleMonitor'
-import { getAppIcon } from './appIcons'
 
 /**
  * Deletes all activity periods from the database
@@ -28,7 +27,6 @@ interface WindowActivityInPeriod {
     appName: string
     url: string | null
     count: number
-    icon?: string | null
 }
 
 interface ActivityPeriodResponse {
@@ -66,6 +64,8 @@ function isValidISODate(dateString: unknown): dateString is string {
 
 /**
  * Fetches window activities for a specific activity period
+ * Note: Icons are NOT included to reduce memory usage. Load them separately in the UI.
+ * Only returns top 5 activities to reduce data transfer (UI only displays top 5 in tooltip).
  */
 async function getWindowActivitiesForPeriod(
     periodStart: string,
@@ -87,23 +87,12 @@ async function getWindowActivitiesForPeriod(
             )
             .groupBy(windowActivities.appName, windowActivities.url)
             .orderBy(sql`SUM(${windowActivities.durationSeconds}) DESC`)
-
-        // Get unique app names
-        const uniqueAppNames = [...new Set(activities.map((a) => a.appName))]
-
-        // Fetch icons for all unique apps
-        const iconPromises = uniqueAppNames.map(async (appName) => ({
-            appName,
-            icon: await getAppIcon(appName),
-        }))
-        const iconResults = await Promise.all(iconPromises)
-        const iconMap = new Map(iconResults.map((r) => [r.appName, r.icon]))
+            .limit(5) // Only return top 5 activities per period
 
         return activities.map((activity) => ({
             appName: activity.appName,
             url: activity.url,
             count: Number(activity.count),
-            icon: iconMap.get(activity.appName) || null,
         }))
     } catch (error) {
         console.error('Failed to get window activities for period:', error)

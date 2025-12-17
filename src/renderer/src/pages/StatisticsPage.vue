@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { LoadingSpinner, Accordion, DateRangePicker } from '@solidtime/ui'
 import { useMyMemberships } from '../utils/myMemberships.ts'
 import { getWindowActivityStats } from '../utils/windowActivities.ts'
@@ -8,6 +8,7 @@ import { activityTrackingEnabled } from '../utils/settings.ts'
 import type { WindowActivityStats } from '../../../preload/interface'
 import StatisticsCard from '../components/StatisticsCard.vue'
 import { dayjs } from '../utils/dayjs.ts'
+import { useAppIcons } from '../utils/appIcons.ts'
 
 const { currentOrganizationId } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
@@ -46,24 +47,14 @@ const windowActivityStats = computed(() => {
     return windowActivityStatsData.value || []
 })
 
-// Fetch app icons
-const appIcons = ref<Record<string, string | null>>({})
+// Get unique app names for icon loading
+const uniqueAppNames = computed(() => {
+    const stats = windowActivityStats.value as WindowActivityStats[]
+    return [...new Set(stats.map((stat: WindowActivityStats) => stat.appName))]
+})
 
-// Watch for changes in windowActivityStats and fetch icons
-watch(
-    windowActivityStats,
-    async (stats: WindowActivityStats[]) => {
-        if (stats.length > 0) {
-            const appNames = [...new Set(stats.map((stat: WindowActivityStats) => stat.appName))]
-            try {
-                appIcons.value = await window.electronAPI.getAppIcons(appNames)
-            } catch (error) {
-                console.error('Failed to fetch app icons:', error)
-            }
-        }
-    },
-    { immediate: true }
-)
+// Load app icons efficiently using the composable
+const { icons: appIcons } = useAppIcons(uniqueAppNames)
 
 // Group activities by application
 const groupedByApp = computed(() => {

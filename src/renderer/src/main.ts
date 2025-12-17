@@ -41,8 +41,8 @@ const vueQueryOptions: VueQueryPluginOptions = {
     queryClientConfig: {
         defaultOptions: {
             queries: {
-                gcTime: 1000 * 60 * 60 * 24,
-                // staleTime: 1000 * 10,
+                gcTime: 1000 * 60 * 5, // 5 minutes (reduced from 24 hours to prevent memory leaks)
+                staleTime: 1000 * 30, // 30 seconds - queries older than this will refetch on window focus
                 retry: (failureCount, error) => {
                     if (failureCount > MAX_RETRIES) {
                         return false

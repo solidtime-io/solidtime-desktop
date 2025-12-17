@@ -20,6 +20,7 @@ import type {
     TimeEntryResponse,
 } from '@solidtime/api'
 import type { ActivityPeriod } from '@solidtime/ui'
+import { useAppIcons } from '../utils/appIcons.ts'
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
@@ -251,6 +252,39 @@ const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
 const activityPeriods = computed<ActivityPeriod[]>(() => {
     return activityPeriodsData.value || []
 })
+
+// Get unique app names from all activity periods for icon loading
+const uniqueAppNamesInPeriods = computed(() => {
+    const periods = activityPeriodsData.value || []
+    const appNames = new Set<string>()
+
+    periods.forEach((period) => {
+        if (period.windowActivities) {
+            period.windowActivities.forEach((activity) => {
+                appNames.add(activity.appName)
+            })
+        }
+    })
+
+    return Array.from(appNames)
+})
+
+// Load app icons efficiently - icons will be used by TimeEntryCalendar
+const { icons: activityIcons } = useAppIcons(uniqueAppNamesInPeriods)
+
+// Enrich activity periods with icons (shallow merge to avoid deep nesting in cache)
+const activityPeriodsWithIcons = computed<ActivityPeriod[]>(() => {
+    const periods = activityPeriods.value
+    const icons = activityIcons.value
+
+    return periods.map((period) => ({
+        ...period,
+        windowActivities: period.windowActivities?.map((activity) => ({
+            ...activity,
+            icon: icons[activity.appName] || null,
+        })),
+    }))
+})
 </script>
 
 <template>
@@ -266,7 +300,7 @@ const activityPeriods = computed<ActivityPeriod[]>(() => {
                 :tasks="tasks"
                 :clients="clients"
                 :tags="tags"
-                :activityPeriods="activityPeriods"
+                :activityPeriods="activityPeriodsWithIcons"
                 :loading="timeEntriesLoading"
                 :enableEstimatedTime="false"
                 :currency="currentMembership?.organization?.currency || 'USD'"
