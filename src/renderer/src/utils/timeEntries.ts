@@ -6,6 +6,7 @@ import type {
     UpdateMultipleTimeEntriesChangeset,
 } from '@solidtime/api'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
+import type { InfiniteData } from '@tanstack/vue-query'
 import { useMyMemberships } from './myMemberships.ts'
 
 export const emptyTimeEntry = {
@@ -157,14 +158,18 @@ export function useTimeEntryUpdateMutation() {
             await queryClient.cancelQueries({ queryKey: ['timeEntries', currentOrganizationId] })
             queryClient.setQueryData(
                 ['timeEntries', currentOrganizationId],
-                (old: TimeEntryResponse) => {
-                    const optimisticTimeEntries = old.data.map((entry) => {
-                        if (entry.id === variables.id) {
-                            return { ...variables }
-                        }
-                        return entry
+                (old: InfiniteData<TimeEntryResponse> | undefined) => {
+                    if (!old) return old
+                    const updatedPages = old.pages.map((page: TimeEntryResponse) => {
+                        const optimisticTimeEntries = page.data.map((entry) => {
+                            if (entry.id === variables.id) {
+                                return { ...variables }
+                            }
+                            return entry
+                        })
+                        return { ...page, data: optimisticTimeEntries }
                     })
-                    return { data: optimisticTimeEntries }
+                    return { ...old, pages: updatedPages }
                 }
             )
             return { variables }
@@ -237,14 +242,18 @@ export function useTimeEntriesUpdateMutation() {
             await queryClient.cancelQueries({ queryKey: ['timeEntries', currentOrganizationId] })
             queryClient.setQueryData(
                 ['timeEntries', currentOrganizationId],
-                (old: TimeEntryResponse) => {
-                    const optimisticTimeEntries = old.data.map((entry) => {
-                        if (ids.includes(entry.id)) {
-                            return { ...entry, ...changes }
-                        }
-                        return entry
+                (old: InfiniteData<TimeEntryResponse> | undefined) => {
+                    if (!old) return old
+                    const updatedPages = old.pages.map((page: TimeEntryResponse) => {
+                        const optimisticTimeEntries = page.data.map((entry) => {
+                            if (ids.includes(entry.id)) {
+                                return { ...entry, ...changes }
+                            }
+                            return entry
+                        })
+                        return { ...page, data: optimisticTimeEntries }
                     })
-                    return { data: optimisticTimeEntries }
+                    return { ...old, pages: updatedPages }
                 }
             )
             return { ids, changes }
