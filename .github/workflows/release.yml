@@ -37,6 +37,10 @@ jobs:
             - name: Install dependencies
               run: npm install
 
+            - name: Install ARM64 native module for Windows
+              if: ${{ matrix.platform == 'windows' }}
+              run: npm install --no-save --force @miniben90/x-win-win32-arm64-msvc
+
             - name: Build
               run: npm run build
 
