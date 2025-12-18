@@ -37,17 +37,32 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Install ARM64 native module for Windows
+            - name: Install all Windows native modules for cross-arch build
               if: ${{ matrix.platform == 'windows' }}
-              run: npm install --no-save --force @miniben90/x-win-win32-arm64-msvc
+              run: npm install --save-dev @miniben90/x-win-win32-x64-msvc @miniben90/x-win-win32-arm64-msvc --ignore-platform --ignore-engines
+
+            - name: Install all macOS native modules for cross-arch build
+              if: ${{ matrix.platform == 'mac' }}
+              run: npm install --save-dev @miniben90/x-win-darwin-arm64 @miniben90/x-win-darwin-x64 @miniben90/x-win-darwin-universal --ignore-platform --ignore-engines
+
+            - name: Install all Linux native modules for cross-arch build
+              if: ${{ matrix.platform == 'linux' }}
+              run: npm install --save-dev @miniben90/x-win-linux-x64-gnu @miniben90/x-win-linux-arm64-gnu --ignore-platform --ignore-engines
 
             - name: Build
               run: npm run build
 
-            - name: Run Electron Builder
-              if: ${{ matrix.platform != 'mac' }}
+            - name: Run Electron Builder (Windows)
+              if: ${{ matrix.platform == 'windows' }}
               run: |
-                  npx electron-builder --${{ matrix.platform }} --publish always
+                  npx electron-builder --windows --publish always
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+            - name: Run Electron Builder (Linux)
+              if: ${{ matrix.platform == 'linux' }}
+              run: |
+                  npx electron-builder --linux --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 

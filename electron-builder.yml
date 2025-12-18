@@ -11,6 +11,7 @@ files:
     - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
     - resources/**
+    - node_modules/@miniben90/**
 extraResources:
     - from: drizzle
       to: drizzle
