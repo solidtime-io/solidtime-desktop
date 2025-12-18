@@ -37,7 +37,7 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Install dependencies
+            - name: Build
               run: npm run build
 
             - name: Run Electron Builder

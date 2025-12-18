@@ -20,8 +20,13 @@ protocols:
         - solidtime
 win:
     executableName: solidtime
+    target:
+        - target: nsis
+          arch:
+              - x64
+              - arm64
 nsis:
-    artifactName: ${name}-setup.${ext}
+    artifactName: ${name}-setup-${arch}.${ext}
     shortcutName: ${productName}
     uninstallDisplayName: ${productName}
     createDesktopShortcut: always
