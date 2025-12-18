@@ -39,15 +39,15 @@ jobs:
 
             - name: Install all Windows native modules for cross-arch build
               if: ${{ matrix.platform == 'windows' }}
-              run: npm install --save-dev @miniben90/x-win-win32-x64-msvc @miniben90/x-win-win32-arm64-msvc --ignore-platform --ignore-engines
+              run: npm install --save-dev @miniben90/x-win-win32-x64-msvc @miniben90/x-win-win32-arm64-msvc --force
 
             - name: Install all macOS native modules for cross-arch build
               if: ${{ matrix.platform == 'mac' }}
-              run: npm install --save-dev @miniben90/x-win-darwin-arm64 @miniben90/x-win-darwin-x64 @miniben90/x-win-darwin-universal --ignore-platform --ignore-engines
+              run: npm install --save-dev @miniben90/x-win-darwin-arm64 @miniben90/x-win-darwin-x64 @miniben90/x-win-darwin-universal --force
 
             - name: Install all Linux native modules for cross-arch build
               if: ${{ matrix.platform == 'linux' }}
-              run: npm install --save-dev @miniben90/x-win-linux-x64-gnu @miniben90/x-win-linux-arm64-gnu --ignore-platform --ignore-engines
+              run: npm install --save-dev @miniben90/x-win-linux-x64-gnu @miniben90/x-win-linux-arm64-gnu --force
 
             - name: Build
               run: npm run build
