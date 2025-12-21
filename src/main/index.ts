@@ -19,6 +19,30 @@ import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 import { stopIdleMonitoring } from './idleMonitor'
 
+// Global error handlers to capture full error details
+process.on('uncaughtException', (error) => {
+    console.error('=== UNCAUGHT EXCEPTION ===')
+    console.error('Error name:', error.name)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+
+    // Show error dialog
+    dialog.showErrorBox(
+        'A JavaScript error occurred in the main process',
+        `${error.name}: ${error.message}\n\nStack:\n${error.stack}`
+    )
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('=== UNHANDLED REJECTION ===')
+    console.error('Promise:', promise)
+    console.error('Reason:', reason)
+    if (reason instanceof Error) {
+        console.error('Error stack:', reason.stack)
+    }
+})
+
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
     app.quit()
