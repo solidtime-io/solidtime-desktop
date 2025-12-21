@@ -4,6 +4,7 @@ on:
     push:
         tags:
             - 'v*.*.*'
+
 jobs:
     release:
         runs-on: ${{ matrix.os }}
@@ -13,23 +14,18 @@ jobs:
         strategy:
             matrix:
                 include:
-                    # macOS - builds universal binary (x64 + arm64)
                     - os: macos-latest
                       platform: mac
                       arch: universal
-                    # Linux x64
                     - os: ubuntu-latest
                       platform: linux
                       arch: x64
-                    # Linux ARM64
                     - os: ubuntu-24.04-arm
                       platform: linux
                       arch: arm64
-                    # Windows x64
                     - os: windows-latest
                       platform: windows
                       arch: x64
-                    # Windows ARM64 - uses native ARM64 runner
                     - os: windows-11-arm
                       platform: windows
                       arch: arm64
@@ -40,7 +36,7 @@ jobs:
 
             - name: Install Snapcraft
               uses: samuelmeuli/action-snapcraft@v2
-              if: ${{ matrix.platform == 'linux' }}
+              if: matrix.platform == 'linux'
 
             - name: Install Node.js
               uses: actions/setup-node@v3
@@ -50,49 +46,30 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            # macOS builds both x64 and arm64, but macos-latest is arm64
-            # Need to explicitly install x64 binary for the x64 build
             - name: Install macOS x64 native module
-              if: ${{ matrix.platform == 'mac' }}
+              if: matrix.platform == 'mac'
               run: npm install --save-dev @miniben90/x-win-darwin-x64 --force
 
             - name: Build
               run: npm run build
 
-            # Windows: Build for specific architecture only
-            - name: Run Electron Builder (Windows x64)
-              if: ${{ matrix.platform == 'windows' && matrix.arch == 'x64' }}
-              run: |
-                  npx electron-builder --windows --x64 --publish always
+            - name: Run Electron Builder (Windows)
+              if: matrix.platform == 'windows'
+              run: npx electron-builder --windows --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-            - name: Run Electron Builder (Windows ARM64)
-              if: ${{ matrix.platform == 'windows' && matrix.arch == 'arm64' }}
-              run: |
-                  npx electron-builder --windows --arm64 --publish always
-              env:
-                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-            - name: Run Electron Builder (Linux x64)
-              if: ${{ matrix.platform == 'linux' && matrix.arch == 'x64' }}
-              run: |
-                  npx electron-builder --linux --x64 --publish always
-              env:
-                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-            - name: Run Electron Builder (Linux ARM64)
-              if: ${{ matrix.platform == 'linux' && matrix.arch == 'arm64' }}
-              run: |
-                  npx electron-builder --linux --arm64 --publish always
+            - name: Run Electron Builder (Linux)
+              if: matrix.platform == 'linux'
+              run: npx electron-builder --linux --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
             - name: Run Electron Builder (macOS)
-              if: ${{ matrix.platform == 'mac' }}
+              if: matrix.platform == 'mac'
               run: |
                   echo "$API_KEY" > apple.p8
-                  npx electron-builder --mac --publish always
+                  npx electron-builder --mac --universal --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   CSC_LINK: ${{ secrets.MAC_CERTS }}

@@ -27,10 +27,7 @@ protocols:
 win:
     executableName: solidtime
     target:
-        - target: nsis
-          arch:
-              - x64
-              - arm64
+        - nsis
 nsis:
     include: build/installer.nsh
     artifactName: ${name}-setup-${arch}.${ext}
@@ -39,11 +36,7 @@ nsis:
     createDesktopShortcut: always
 mac:
     entitlementsInherit: build/entitlements.mac.plist
-    target:
-        target: default
-        arch:
-            - x64
-            - arm64
+    target: default
     extendInfo:
         - NSCameraUsageDescription: Application requests access to the device's camera.
         - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
@@ -58,22 +51,10 @@ linux:
     icon: build/icon.icns
     executableName: solidtime
     target:
-        - target: deb
-          arch:
-              - x64
-              - arm64
-        - target: snap
-          arch:
-              - x64
-              - arm64
-        - target: tar.gz
-          arch:
-              - x64
-              - arm64
-        - target: rpm
-          arch:
-              - x64
-              - arm64
+        - deb
+        - snap
+        - tar.gz
+        - rpm
     desktop:
         entry:
             Name: solidtime
@@ -83,9 +64,9 @@ linux:
     mimeTypes:
         - x-scheme-handler/solidtime
 rpm:
-  fpm:
-    - --rpm-rpmbuild-define
-    - _build_id_links none
+    fpm:
+        - --rpm-rpmbuild-define
+        - _build_id_links none
 appImage:
     artifactName: ${name}.${ext}
 npmRebuild: true
