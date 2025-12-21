@@ -21,6 +21,10 @@ jobs:
                     - os: ubuntu-latest
                       platform: linux
                       arch: x64
+                    # Linux ARM64
+                    - os: ubuntu-24.04-arm
+                      platform: linux
+                      arch: arm64
                     # Windows x64
                     - os: windows-latest
                       platform: windows
@@ -70,10 +74,17 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-            - name: Run Electron Builder (Linux)
-              if: ${{ matrix.platform == 'linux' }}
+            - name: Run Electron Builder (Linux x64)
+              if: ${{ matrix.platform == 'linux' && matrix.arch == 'x64' }}
               run: |
-                  npx electron-builder --linux --publish always
+                  npx electron-builder --linux --x64 --publish always
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+            - name: Run Electron Builder (Linux ARM64)
+              if: ${{ matrix.platform == 'linux' && matrix.arch == 'arm64' }}
+              run: |
+                  npx electron-builder --linux --arm64 --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
