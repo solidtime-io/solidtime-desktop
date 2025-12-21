@@ -74,6 +74,7 @@ deb:
         - libuuid1
         - libsecret-1-0
         - libgbm1
+        - libasound2
 rpm:
     fpm:
         - --rpm-rpmbuild-define
