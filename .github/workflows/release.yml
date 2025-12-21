@@ -12,14 +12,23 @@ jobs:
 
         strategy:
             matrix:
-                os: [macos-latest, ubuntu-latest, windows-latest]
                 include:
+                    # macOS - builds universal binary (x64 + arm64)
                     - os: macos-latest
                       platform: mac
+                      arch: universal
+                    # Linux x64
                     - os: ubuntu-latest
                       platform: linux
+                      arch: x64
+                    # Windows x64
                     - os: windows-latest
                       platform: windows
+                      arch: x64
+                    # Windows ARM64 - uses native ARM64 runner
+                    - os: windows-11-arm
+                      platform: windows
+                      arch: arm64
 
         steps:
             - name: Check out Git repository
@@ -37,25 +46,27 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Install all Windows native modules for cross-arch build
-              if: ${{ matrix.platform == 'windows' }}
-              run: npm install --save-dev @miniben90/x-win-win32-x64-msvc @miniben90/x-win-win32-arm64-msvc --force
-
-            - name: Install all macOS native modules for cross-arch build
+            # macOS builds both x64 and arm64, but macos-latest is arm64
+            # Need to explicitly install x64 binary for the x64 build
+            - name: Install macOS x64 native module
               if: ${{ matrix.platform == 'mac' }}
-              run: npm install --save-dev @miniben90/x-win-darwin-arm64 @miniben90/x-win-darwin-x64 @miniben90/x-win-darwin-universal --force
-
-            - name: Install all Linux native modules for cross-arch build
-              if: ${{ matrix.platform == 'linux' }}
-              run: npm install --save-dev @miniben90/x-win-linux-x64-gnu @miniben90/x-win-linux-arm64-gnu --force
+              run: npm install --save-dev @miniben90/x-win-darwin-x64 --force
 
             - name: Build
               run: npm run build
 
-            - name: Run Electron Builder (Windows)
-              if: ${{ matrix.platform == 'windows' }}
+            # Windows: Build for specific architecture only
+            - name: Run Electron Builder (Windows x64)
+              if: ${{ matrix.platform == 'windows' && matrix.arch == 'x64' }}
               run: |
-                  npx electron-builder --windows --publish always
+                  npx electron-builder --windows --x64 --publish always
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+            - name: Run Electron Builder (Windows ARM64)
+              if: ${{ matrix.platform == 'windows' && matrix.arch == 'arm64' }}
+              run: |
+                  npx electron-builder --windows --arm64 --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -66,11 +77,11 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-            - name: Run Electron Builder
+            - name: Run Electron Builder (macOS)
               if: ${{ matrix.platform == 'mac' }}
               run: |
                   echo "$API_KEY" > apple.p8
-                  npx electron-builder --${{ matrix.platform }} --publish always
+                  npx electron-builder --mac --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   CSC_LINK: ${{ secrets.MAC_CERTS }}
