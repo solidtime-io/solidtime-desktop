@@ -15,6 +15,10 @@ asarUnpack:
 extraResources:
     - from: drizzle
       to: drizzle
+    - from: build/vc_redist.arm64.exe
+      to: vc_redist.arm64.exe
+      filter:
+          - '**/*'
 protocols:
     name: solidtime
     schemes:
@@ -27,6 +31,7 @@ win:
               - x64
               - arm64
 nsis:
+    include: build/installer.nsh
     artifactName: ${name}-setup-${arch}.${ext}
     shortcutName: ${productName}
     uninstallDisplayName: ${productName}
