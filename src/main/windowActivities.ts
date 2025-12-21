@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { windowActivities } from './db/schema'
-import { and, gte, lte, sql } from 'drizzle-orm'
+import { and, gte, lte, sql, ne } from 'drizzle-orm'
 
 /**
  * Deletes all window activities from the database
@@ -33,7 +33,8 @@ export function registerWindowActivitiesHandlers() {
                 .where(
                     and(
                         gte(windowActivities.timestamp, startDate),
-                        lte(windowActivities.timestamp, endDate)
+                        lte(windowActivities.timestamp, endDate),
+                        ne(windowActivities.appName, 'Unknown')
                     )
                 )
                 .orderBy(windowActivities.timestamp)
@@ -59,7 +60,8 @@ export function registerWindowActivitiesHandlers() {
                 .where(
                     and(
                         gte(windowActivities.timestamp, startDate),
-                        lte(windowActivities.timestamp, endDate)
+                        lte(windowActivities.timestamp, endDate),
+                        ne(windowActivities.appName, 'Unknown')
                     )
                 )
                 .groupBy(

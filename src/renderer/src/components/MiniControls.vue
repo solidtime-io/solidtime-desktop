@@ -161,7 +161,7 @@ const currentTimer = computed(() => {
 <template>
     <div
         class="h-screen relative w-screen border-border-secondary border bg-primary rounded-[10px] text-white py-1 flex items-center cursor-default justify-between select-none">
-        <div class="text-sm text-muted flex items-center relative flex-1 min-w-0">
+        <div class="text-sm text-text-tertiary flex items-center relative flex-1 min-w-0">
             <div class="pl-1 pr-1 z-20 relative block" style="-webkit-app-region: drag">
                 <svg
                     class="h-5"
@@ -187,9 +187,10 @@ const currentTimer = computed(() => {
                         :color="shownProject?.color"
                         :name="shownProject?.name ?? 'No Project'"></ProjectBadge>
                     <div class="flex text-xs flex-1 truncate items-center space-x-0.5 shrink">
-                        <ChevronRightIcon class="w-4 shrink-0 text-muted"></ChevronRightIcon>
+                        <ChevronRightIcon
+                            class="w-4 shrink-0 text-text-tertiary"></ChevronRightIcon>
                         <span
-                            class="truncate shrink text-muted opacity-50 hover:opacity-100 transition-opacity min-w-0"
+                            class="truncate shrink text-text-tertiary opacity-50 hover:opacity-100 transition-opacity min-w-0"
                             >{{ shownDescription ?? 'No Description' }}</span
                         >
                     </div>
@@ -200,7 +201,7 @@ const currentTimer = computed(() => {
 
         <div class="pr-1 flex items-center space-x-1">
             <div
-                class="text-xs font-semibold text-muted px-2 w-[65px] text-left"
+                class="text-xs font-semibold text-text-tertiary px-2 w-[65px] text-left"
                 style="-webkit-app-region: drag">
                 {{ currentTimer }}
             </div>
