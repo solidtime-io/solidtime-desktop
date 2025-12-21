@@ -1,6 +1,6 @@
 {
     "name": "solidtime",
-    "version": "0.0.64-beta",
+    "version": "0.0.65-beta",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
     "author": "solidtime.io",
