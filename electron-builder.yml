@@ -75,6 +75,14 @@ deb:
         - libsecret-1-0
         - libgbm1
         - libasound2
+        - libegl1
+        - libdrm2
+        - libx11-xcb1
+        - libxcb-dri3-0
+        - libxcomposite1
+        - libxdamage1
+        - libxfixes3
+        - libxrandr2
 rpm:
     fpm:
         - --rpm-rpmbuild-define
