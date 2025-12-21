@@ -34,16 +34,6 @@ jobs:
             - name: Check out Git repository
               uses: actions/checkout@v3
 
-            - name: Setup Snapcraft and dependencies
-              if: matrix.platform == 'linux'
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y zlib1g-dev libssl-dev
-                  sudo snap install snapcraft --classic
-                  sudo snap refresh lxd --channel=latest/stable || sudo snap install lxd
-                  sudo lxd init --auto
-                  sudo usermod -a -G lxd $USER
-
             - name: Install Node.js
               uses: actions/setup-node@v3
               with:

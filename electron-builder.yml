@@ -52,7 +52,6 @@ linux:
     executableName: solidtime
     target:
         - deb
-        - snap
         - tar.gz
         - rpm
     desktop:
