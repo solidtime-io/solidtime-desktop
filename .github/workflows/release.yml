@@ -34,6 +34,13 @@ jobs:
             - name: Check out Git repository
               uses: actions/checkout@v3
 
+            - name: Install system FPM (Linux ARM64)
+              if: matrix.platform == 'linux' && matrix.arch == 'arm64'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ruby ruby-dev rubygems build-essential
+                  sudo gem install --no-document fpm
+
             - name: Install Node.js
               uses: actions/setup-node@v3
               with:
@@ -60,6 +67,7 @@ jobs:
               run: npx electron-builder --linux --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+                  USE_SYSTEM_FPM: ${{ matrix.arch == 'arm64' && 'true' || 'false' }}
 
             - name: Run Electron Builder (macOS)
               if: matrix.platform == 'mac'
