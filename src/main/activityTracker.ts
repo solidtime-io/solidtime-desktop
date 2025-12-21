@@ -1,14 +1,41 @@
-import {
-    activeWindowAsync,
-    subscribeActiveWindow,
-    unsubscribeAllActiveWindow,
-} from '@miniben90/x-win'
 import { db } from './db/client'
 import { windowActivities, validateNewWindowActivity } from './db/schema'
 import { getAppSettings } from './settings'
 import { hasScreenRecordingPermission } from './permissions'
 import { ipcMain } from 'electron'
 import { logger } from './logger'
+
+// Lazy-load x-win module with detailed error reporting
+let xWinModule: any = null
+let xWinLoadError: Error | null = null
+
+async function loadXWinModule() {
+    if (xWinModule) return xWinModule
+    if (xWinLoadError) throw xWinLoadError
+
+    try {
+        console.log('=== ATTEMPTING TO LOAD @miniben90/x-win ===')
+        console.log('Process platform:', process.platform)
+        console.log('Process arch:', process.arch)
+        console.log('Process versions:', JSON.stringify(process.versions, null, 2))
+        console.log('__dirname:', __dirname)
+        console.log('process.cwd():', process.cwd())
+        console.log('app.isPackaged:', require('electron').app.isPackaged)
+
+        xWinModule = await import('@miniben90/x-win')
+        console.log('=== @miniben90/x-win LOADED SUCCESSFULLY ===')
+        return xWinModule
+    } catch (error) {
+        console.error('=== FAILED TO LOAD @miniben90/x-win ===')
+        console.error('Error name:', error instanceof Error ? error.name : 'Unknown')
+        console.error('Error message:', error instanceof Error ? error.message : String(error))
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
+        console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+
+        xWinLoadError = error instanceof Error ? error : new Error(String(error))
+        throw xWinLoadError
+    }
+}
 
 interface WindowInfo {
     id: number
@@ -114,9 +141,17 @@ export async function startActivityTracking(): Promise<void> {
 
     logger.info('Starting activity tracking...')
 
+    let xWin
+    try {
+        xWin = await loadXWinModule()
+    } catch (error) {
+        logger.error('Cannot start activity tracking - x-win module failed to load:', error)
+        return
+    }
+
     try {
         // Get initial window state
-        const initialWindow = await activeWindowAsync()
+        const initialWindow = await xWin.activeWindowAsync()
         if (initialWindow) {
             lastWindowInfo = initialWindow as WindowInfo
             currentActivityStartTime = new Date()
@@ -128,7 +163,7 @@ export async function startActivityTracking(): Promise<void> {
     }
 
     // Subscribe to window changes
-    subscriptionId = subscribeActiveWindow(async (error, windowInfo) => {
+    subscriptionId = xWin.subscribeActiveWindow(async (error, windowInfo) => {
         if (error) {
             logger.error('Error in window subscription:', error)
             return
@@ -254,8 +289,8 @@ export async function stopActivityTracking(): Promise<void> {
     await saveCurrentActivityIfNeeded()
 
     // Unsubscribe from window changes
-    if (subscriptionId !== null) {
-        unsubscribeAllActiveWindow()
+    if (subscriptionId !== null && xWinModule) {
+        xWinModule.unsubscribeAllActiveWindow()
         subscriptionId = null
     }
 

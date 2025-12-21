@@ -1,7 +1,27 @@
 import { ipcMain, app } from 'electron'
-import { openWindowsAsync } from '@miniben90/x-win'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+
+// Lazy-load x-win module with detailed error reporting
+let xWinModule: any = null
+let xWinLoadError: Error | null = null
+
+async function loadXWinModule() {
+    if (xWinModule) return xWinModule
+    if (xWinLoadError) throw xWinLoadError
+
+    try {
+        console.log('=== appIcons: ATTEMPTING TO LOAD @miniben90/x-win ===')
+        xWinModule = await import('@miniben90/x-win')
+        console.log('=== appIcons: @miniben90/x-win LOADED SUCCESSFULLY ===')
+        return xWinModule
+    } catch (error) {
+        console.error('=== appIcons: FAILED TO LOAD @miniben90/x-win ===')
+        console.error('Error:', error instanceof Error ? error.message : String(error))
+        xWinLoadError = error instanceof Error ? error : new Error(String(error))
+        throw xWinLoadError
+    }
+}
 
 const ICON_CACHE_DIR = path.join(app.getPath('userData'), 'app-icons')
 const ICON_CACHE_EXPIRY_DAYS = 30 // Expire icons after 30 days
@@ -116,7 +136,8 @@ export async function getAppIcon(appName: string): Promise<string | null> {
  */
 async function fetchIconForApp(appName: string): Promise<string | null> {
     try {
-        const windows = await openWindowsAsync()
+        const xWin = await loadXWinModule()
+        const windows = await xWin.openWindowsAsync()
         const matchingWindow = windows.find(
             (win) => win.info.name === appName || win.info.execName === appName
         )
@@ -165,7 +186,8 @@ async function getAppIcons(appNames: string[]): Promise<Record<string, string | 
 
     // Fetch all open windows once for all uncached apps
     try {
-        const windows = await openWindowsAsync()
+        const xWin = await loadXWinModule()
+        const windows = await xWin.openWindowsAsync()
 
         // Process each app that needs fetching
         await Promise.all(
