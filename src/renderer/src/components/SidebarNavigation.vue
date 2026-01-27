@@ -42,7 +42,7 @@ function navigateTo(path: string) {
 </script>
 
 <template>
-    <TooltipProvider>
+    <TooltipProvider :ignore-non-keyboard-focus="true">
         <div
             class="w-14 bg-background border-r border-border-primary flex flex-col items-center py-3">
             <Tooltip v-for="item in navItems" :key="item.path">
