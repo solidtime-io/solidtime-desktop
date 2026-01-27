@@ -20,7 +20,8 @@
         "build:unpack": "npm run build && electron-builder --dir",
         "build:win": "npm run build && electron-builder --win",
         "build:mac": "npm run build && electron-builder --mac",
-        "build:linux": "npm run build && electron-builder --linux"
+        "build:linux": "npm run build && electron-builder --linux",
+        "test:e2e": "npx playwright test --config=e2e/playwright.config.ts"
     },
     "build:": {
         "generateUpdatesFilesForAllChannels": true,
@@ -48,6 +49,7 @@
         "@electron-toolkit/eslint-config-ts": "^2.0.0",
         "@electron-toolkit/tsconfig": "^2.0.0",
         "@heroicons/vue": "^2.1.5",
+        "@playwright/test": "^1.58.0",
         "@rushstack/eslint-patch": "^1.10.3",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/forms": "^0.5.7",

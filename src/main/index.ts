@@ -19,6 +19,8 @@ import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 import { stopIdleMonitoring } from './idleMonitor'
 
+import { isE2ETesting } from './env'
+
 // Global error handlers to capture full error details
 process.on('uncaughtException', (error) => {
     console.error('=== UNCAUGHT EXCEPTION ===')
@@ -27,11 +29,13 @@ process.on('uncaughtException', (error) => {
     console.error('Error stack:', error.stack)
     console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
 
-    // Show error dialog
-    dialog.showErrorBox(
-        'A JavaScript error occurred in the main process',
-        `${error.name}: ${error.message}\n\nStack:\n${error.stack}`
-    )
+    // Show error dialog (skip in E2E testing to avoid blocking)
+    if (!isE2ETesting()) {
+        dialog.showErrorBox(
+            'A JavaScript error occurred in the main process',
+            `${error.name}: ${error.message}\n\nStack:\n${error.stack}`
+        )
+    }
 })
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -43,9 +47,11 @@ process.on('unhandledRejection', (reason, promise) => {
     }
 })
 
-const gotTheLock = app.requestSingleInstanceLock()
-if (!gotTheLock) {
-    app.quit()
+if (!isE2ETesting()) {
+    const gotTheLock = app.requestSingleInstanceLock()
+    if (!gotTheLock) {
+        app.quit()
+    }
 }
 
 initializeAutoUpdater()
@@ -191,6 +197,11 @@ app.on('window-all-closed', () => {
 
 // Save active periods before the app quits
 app.on('before-quit', async (event) => {
+    // Skip cleanup during E2E testing to avoid slow shutdown
+    if (isE2ETesting()) {
+        return
+    }
+
     event.preventDefault()
 
     try {
