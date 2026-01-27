@@ -2,10 +2,11 @@ import { db } from './db/client'
 import { windowActivities, validateNewWindowActivity } from './db/schema'
 import { getAppSettings } from './settings'
 import { hasScreenRecordingPermission } from './permissions'
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import { logger } from './logger'
 
 // Lazy-load x-win module with detailed error reporting
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let xWinModule: any = null
 let xWinLoadError: Error | null = null
 
@@ -20,7 +21,7 @@ async function loadXWinModule() {
         console.log('Process versions:', JSON.stringify(process.versions, null, 2))
         console.log('__dirname:', __dirname)
         console.log('process.cwd():', process.cwd())
-        console.log('app.isPackaged:', require('electron').app.isPackaged)
+        console.log('app.isPackaged:', app.isPackaged)
 
         xWinModule = await import('@miniben90/x-win')
         console.log('=== @miniben90/x-win LOADED SUCCESSFULLY ===')

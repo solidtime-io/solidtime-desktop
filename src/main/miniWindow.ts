@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { isE2ETesting } from './env'
 
 export function initializeMiniWindow(icon: string) {
     const miniWindow = new BrowserWindow({
@@ -27,8 +28,10 @@ export function initializeMiniWindow(icon: string) {
 
 export function registerMiniWindowListeners(miniWindow: BrowserWindow) {
     ipcMain.on('showMiniWindow', () => {
-        miniWindow.show()
-        miniWindow.focus()
+        if (!isE2ETesting()) {
+            miniWindow.show()
+            miniWindow.focus()
+        }
     })
     ipcMain.on('hideMiniWindow', () => {
         miniWindow.hide()

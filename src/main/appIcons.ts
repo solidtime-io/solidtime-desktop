@@ -3,6 +3,7 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 
 // Lazy-load x-win module with detailed error reporting
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let xWinModule: any = null
 let xWinLoadError: Error | null = null
 

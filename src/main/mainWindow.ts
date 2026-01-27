@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { isE2ETesting } from './env'
 
 let mainWindowInstance: BrowserWindow | null = null
 
@@ -28,8 +29,10 @@ export function initializeMainWindow(icon: string) {
     })
 
     app.on('activate', () => {
-        mainWindow.show()
-        mainWindow.focus()
+        if (!isE2ETesting()) {
+            mainWindow.show()
+            mainWindow.focus()
+        }
     })
 
     let forcequit = false
@@ -44,7 +47,9 @@ export function initializeMainWindow(icon: string) {
     })
 
     mainWindow.on('ready-to-show', () => {
-        mainWindow.show()
+        if (!isE2ETesting()) {
+            mainWindow.show()
+        }
     })
 
     mainWindowInstance = mainWindow
@@ -59,7 +64,7 @@ export function registerMainWindowListeners(mainWindow: BrowserWindow) {
         mainWindow.webContents.send('stopTimer')
     })
     ipcMain.on('showMainWindow', () => {
-        if (mainWindow) {
+        if (mainWindow && !isE2ETesting()) {
             mainWindow.show()
             mainWindow.focus()
         }
