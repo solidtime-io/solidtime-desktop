@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { activityPeriods, windowActivities } from './db/schema'
-import { gte, lte, and, sql } from 'drizzle-orm'
+import { gte, lte, and } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
 import { getCurrentActivityPeriod } from './idleMonitor'
 
@@ -42,6 +42,211 @@ interface ActivityPeriodsResult {
     error?: string
 }
 
+const BUCKET_INTERVAL_MS = 10 * 60 * 1000 // 10 minutes in milliseconds
+
+/**
+ * Rounds a timestamp down to the nearest 10-minute boundary.
+ * E.g., 10:03 → 10:00, 10:17 → 10:10
+ */
+function floorToInterval(date: Date): Date {
+    const ms = date.getTime()
+    return new Date(ms - (ms % BUCKET_INTERVAL_MS))
+}
+
+/**
+ * Rounds a timestamp up to the nearest 10-minute boundary.
+ * E.g., 10:03 → 10:10, 10:20 → 10:20 (no change if already on boundary)
+ */
+function ceilToInterval(date: Date): Date {
+    const ms = date.getTime()
+    const remainder = ms % BUCKET_INTERVAL_MS
+    return remainder === 0 ? new Date(ms) : new Date(ms + (BUCKET_INTERVAL_MS - remainder))
+}
+
+interface RawWindowActivity {
+    timestamp: string
+    durationSeconds: number
+    appName: string
+    url: string | null
+}
+
+/**
+ * Fetches all window activities in the given date range in a single query.
+ */
+async function fetchAllWindowActivitiesInRange(
+    startDate: string,
+    endDate: string
+): Promise<RawWindowActivity[]> {
+    try {
+        const activities = await db
+            .select({
+                timestamp: windowActivities.timestamp,
+                durationSeconds: windowActivities.durationSeconds,
+                appName: windowActivities.appName,
+                url: windowActivities.url,
+            })
+            .from(windowActivities)
+            .where(
+                and(
+                    gte(windowActivities.timestamp, startDate),
+                    lte(windowActivities.timestamp, endDate)
+                )
+            )
+
+        return activities.map((a) => ({
+            timestamp: a.timestamp,
+            durationSeconds: a.durationSeconds,
+            appName: a.appName,
+            url: a.url,
+        }))
+    } catch (error) {
+        console.error('Failed to fetch window activities in range:', error)
+        return []
+    }
+}
+
+interface RawPeriod {
+    start: string
+    end: string
+    isIdle: boolean
+}
+
+/**
+ * Transforms variable-length activity periods into clock-aligned 10-minute buckets.
+ * Each bucket's idle/active state is determined by majority overlap.
+ * Window activities are aggregated per bucket with top 5 by duration.
+ */
+function bucketizeActivityPeriods(
+    rawPeriods: RawPeriod[],
+    allWindowActivities: RawWindowActivity[],
+    now: Date
+): ActivityPeriodResponse[] {
+    if (rawPeriods.length === 0) {
+        return []
+    }
+
+    // Find the overall time range from all periods
+    let minTime = Infinity
+    let maxTime = -Infinity
+    for (const period of rawPeriods) {
+        const s = new Date(period.start).getTime()
+        const e = new Date(period.end).getTime()
+        if (s < minTime) minTime = s
+        if (e > maxTime) maxTime = e
+    }
+
+    // Generate clock-aligned bucket boundaries
+    const bucketStart = floorToInterval(new Date(minTime)).getTime()
+    const bucketEnd = ceilToInterval(new Date(maxTime)).getTime()
+
+    const nowMs = now.getTime()
+    const result: ActivityPeriodResponse[] = []
+
+    for (let bStart = bucketStart; bStart < bucketEnd; bStart += BUCKET_INTERVAL_MS) {
+        const bEnd = bStart + BUCKET_INTERVAL_MS
+
+        // Calculate overlap with each raw period, split by idle/active
+        let activeMs = 0
+        let idleMs = 0
+
+        for (const period of rawPeriods) {
+            const pStart = new Date(period.start).getTime()
+            const pEnd = new Date(period.end).getTime()
+
+            // Calculate overlap between bucket [bStart, bEnd) and period [pStart, pEnd)
+            const overlapStart = Math.max(bStart, pStart)
+            const overlapEnd = Math.min(bEnd, pEnd)
+            const overlap = overlapEnd - overlapStart
+
+            if (overlap > 0) {
+                if (period.isIdle) {
+                    idleMs += overlap
+                } else {
+                    activeMs += overlap
+                }
+            }
+        }
+
+        // Skip buckets with no overlap (gaps in tracking)
+        if (activeMs === 0 && idleMs === 0) {
+            continue
+        }
+
+        // Determine state: majority wins, active on tie
+        const isIdle = idleMs > activeMs
+
+        // Determine the actual end of this bucket (cap at now for in-progress periods)
+        const effectiveEnd = Math.min(bEnd, nowMs)
+        const bucketStartISO = new Date(bStart).toISOString()
+        const bucketEndISO = new Date(effectiveEnd).toISOString()
+
+        // Aggregate window activities for this bucket
+        const bucketActivities = aggregateWindowActivitiesForBucket(
+            allWindowActivities,
+            bucketStartISO,
+            bucketEndISO
+        )
+
+        result.push({
+            start: bucketStartISO,
+            end: bucketEndISO,
+            isIdle,
+            windowActivities: bucketActivities.length > 0 ? bucketActivities : undefined,
+        })
+    }
+
+    return result
+}
+
+/**
+ * Filters and aggregates window activities for a specific bucket time range.
+ * Returns top 5 activities by total duration.
+ */
+function aggregateWindowActivitiesForBucket(
+    allActivities: RawWindowActivity[],
+    bucketStart: string,
+    bucketEnd: string
+): WindowActivityInPeriod[] {
+    // Filter activities that fall within this bucket
+    const filtered = allActivities.filter(
+        (a) => a.timestamp >= bucketStart && a.timestamp <= bucketEnd
+    )
+
+    if (filtered.length === 0) {
+        return []
+    }
+
+    // Aggregate by appName + url
+    const aggregated = new Map<
+        string,
+        { appName: string; url: string | null; totalDuration: number }
+    >()
+
+    for (const activity of filtered) {
+        const key = `${activity.appName}::${activity.url ?? ''}`
+        const existing = aggregated.get(key)
+        if (existing) {
+            existing.totalDuration += activity.durationSeconds
+        } else {
+            aggregated.set(key, {
+                appName: activity.appName,
+                url: activity.url,
+                totalDuration: activity.durationSeconds,
+            })
+        }
+    }
+
+    // Sort by duration descending and take top 5
+    return Array.from(aggregated.values())
+        .sort((a, b) => b.totalDuration - a.totalDuration)
+        .slice(0, 5)
+        .map((a) => ({
+            appName: a.appName,
+            url: a.url,
+            count: a.totalDuration,
+        }))
+}
+
 // Helper function to validate ISO date strings with strict UTC format
 function isValidISODate(dateString: unknown): dateString is string {
     if (typeof dateString !== 'string' || dateString.length === 0) {
@@ -60,44 +265,6 @@ function isValidISODate(dateString: unknown): dateString is string {
 
     // Verify the string can be parsed back to the same value
     return date.toISOString() !== 'Invalid Date'
-}
-
-/**
- * Fetches window activities for a specific activity period
- * Note: Icons are NOT included to reduce memory usage. Load them separately in the UI.
- * Only returns top 5 activities to reduce data transfer (UI only displays top 5 in tooltip).
- */
-async function getWindowActivitiesForPeriod(
-    periodStart: string,
-    periodEnd: string
-): Promise<WindowActivityInPeriod[]> {
-    try {
-        const activities = await db
-            .select({
-                appName: windowActivities.appName,
-                url: windowActivities.url,
-                count: sql<number>`SUM(${windowActivities.durationSeconds})`,
-            })
-            .from(windowActivities)
-            .where(
-                and(
-                    gte(windowActivities.timestamp, periodStart),
-                    lte(windowActivities.timestamp, periodEnd)
-                )
-            )
-            .groupBy(windowActivities.appName, windowActivities.url)
-            .orderBy(sql`SUM(${windowActivities.durationSeconds}) DESC`)
-            .limit(5) // Only return top 5 activities per period
-
-        return activities.map((activity) => ({
-            appName: activity.appName,
-            url: activity.url,
-            count: Number(activity.count),
-        }))
-    } catch (error) {
-        console.error('Failed to get window activities for period:', error)
-        return []
-    }
 }
 
 /**
@@ -133,66 +300,51 @@ async function getActivityPeriods(
             return { success: false, error }
         }
 
+        // Fetch raw periods from database
         const periods = await db
             .select()
             .from(activityPeriods)
             .where(and(gte(activityPeriods.start, startDate), lte(activityPeriods.end, endDate)))
             .orderBy(activityPeriods.start)
 
-        // Validate returned data structure and fetch window activities for each period
-        const validatedPeriods: ActivityPeriodResponse[] = await Promise.all(
-            periods.map(async (period) => {
-                if (!isValidISODate(period.start) || !isValidISODate(period.end)) {
-                    throw new Error(
-                        `Invalid date format in database record: ${JSON.stringify(period)}`
-                    )
-                }
+        // Validate and collect raw periods
+        const rawPeriods: RawPeriod[] = periods.map((period) => {
+            if (!isValidISODate(period.start) || !isValidISODate(period.end)) {
+                throw new Error(`Invalid date format in database record: ${JSON.stringify(period)}`)
+            }
+            return {
+                start: period.start,
+                end: period.end,
+                isIdle: Boolean(period.isIdle),
+            }
+        })
 
-                // Fetch window activities for this period
-                const windowActivitiesForPeriod = await getWindowActivitiesForPeriod(
-                    period.start,
-                    period.end
-                )
-
-                return {
-                    start: period.start,
-                    end: period.end,
-                    isIdle: Boolean(period.isIdle),
-                    windowActivities:
-                        windowActivitiesForPeriod.length > 0
-                            ? windowActivitiesForPeriod
-                            : undefined,
-                }
-            })
-        )
-
-        // Include the current ongoing activity period if it exists and overlaps with the requested range
+        // Include the current ongoing activity period if it overlaps with the requested range
         const currentPeriod = getCurrentActivityPeriod()
         if (currentPeriod) {
             const currentStart = new Date(currentPeriod.start).getTime()
             const currentEnd = new Date(currentPeriod.end).getTime()
 
-            // Check if current period overlaps with requested date range
             if (currentEnd >= startDateTime && currentStart <= endDateTime) {
-                // Fetch window activities for the current period
-                const windowActivitiesForCurrentPeriod = await getWindowActivitiesForPeriod(
-                    currentPeriod.start,
-                    currentPeriod.end
-                )
-
-                validatedPeriods.push({
+                rawPeriods.push({
                     start: currentPeriod.start,
                     end: currentPeriod.end,
                     isIdle: currentPeriod.isIdle,
-                    windowActivities:
-                        windowActivitiesForCurrentPeriod.length > 0
-                            ? windowActivitiesForCurrentPeriod
-                            : undefined,
                 })
             }
         }
 
-        return { success: true, data: validatedPeriods }
+        // Fetch all window activities in the date range in a single query
+        const allWindowActivities = await fetchAllWindowActivitiesInRange(startDate, endDate)
+
+        // Transform into clock-aligned 10-minute buckets
+        const bucketedPeriods = bucketizeActivityPeriods(
+            rawPeriods,
+            allWindowActivities,
+            new Date()
+        )
+
+        return { success: true, data: bucketedPeriods }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
         console.error('Failed to fetch activity periods:', errorMessage, error)
