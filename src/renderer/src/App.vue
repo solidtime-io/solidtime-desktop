@@ -38,7 +38,7 @@ const router = useRouter()
 const queryClient = useQueryClient()
 
 // Use the timer composable for shared timer logic
-const { stopTimer, startTimer, isActive } = useTimer()
+const { stopTimer, continueLastTimer, isActive } = useTimer()
 
 // Live timer for bottom row display
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
@@ -92,9 +92,9 @@ onMounted(async () => {
     // Initialize settings from database
     await initializeSettings()
 
-    // Listen for timer events from mini window
+    // Listen for timer events from mini window / tray
     await listenForBackendEvent('startTimer', () => {
-        startTimer()
+        continueLastTimer()
     })
     await listenForBackendEvent('stopTimer', () => {
         stopTimer()
@@ -120,8 +120,8 @@ async function handleIdleDialogResponse(choice: number, idleStartTime: string) {
         case 2: // Discard & Start New Timer
             // Stop the timer and set the end time to when idle started
             await stopTimer(idleStartTime)
-            // Start a new timer after the stop completes
-            startTimer()
+            // Continue with the last timer's values after the stop completes
+            continueLastTimer()
             break
     }
 }
