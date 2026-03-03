@@ -39,6 +39,7 @@ let idleThreshold = 300
 let idleDetectionEnabled = true
 let isTimerRunning = false
 let waitingForUserResponse = false // Track if we're waiting for idle dialog response
+let powerEventsRegistered = false
 
 export async function initializeIdleMonitor() {
     // Load settings from database
@@ -52,6 +53,7 @@ export async function initializeIdleMonitor() {
     })
 
     registerIdleMonitorListeners()
+    registerPowerMonitorEvents()
 
     // Start monitoring if idle detection is enabled (regardless of timer state)
     if (idleDetectionEnabled) {
@@ -89,6 +91,89 @@ function registerIdleMonitorListeners() {
     })
 }
 
+function transitionToIdle(idleStart: Dayjs) {
+    if (isIdle) return // Guard against double-fire (e.g. macOS suspend firing twice)
+
+    isIdle = true
+    idleStartTime = idleStart
+
+    console.log(`System became idle at ${idleStartTime.toISOString()}`)
+
+    // Save the active period that just ended
+    if (activeStartTime) {
+        // Ensure the end time is not before the start time due to timing precision
+        const endTime = idleStartTime.isBefore(activeStartTime) ? activeStartTime : idleStartTime
+
+        saveActivityPeriod(activeStartTime.utc().format(), endTime.utc().format(), false)
+        activeStartTime = null
+    }
+}
+
+function transitionToActive() {
+    if (!isIdle || !idleStartTime) return // Guard against double-fire
+
+    const idleEnd = dayjs()
+    const idleDurationSeconds = idleEnd.diff(idleStartTime, 'seconds')
+
+    console.log(
+        `System became active at ${idleEnd.toISOString()}, idle duration: ${idleDurationSeconds}s`
+    )
+
+    // Capture the idle period info before resetting state
+    const capturedIdleStart = idleStartTime.utc().format()
+    const capturedIdleEnd = idleEnd.utc().format()
+    const capturedDuration = idleDurationSeconds
+
+    // Reset idle state and resume activity tracking immediately
+    isIdle = false
+    idleStartTime = null
+    activeStartTime = idleEnd
+
+    // Only show dialog if timer is running and we're not already waiting for a response
+    // This prevents multiple dialogs from appearing
+    if (isTimerRunning && !waitingForUserResponse) {
+        waitingForUserResponse = true
+
+        // Show dialog asynchronously without blocking the interval
+        showIdleDialog(capturedIdleStart, capturedIdleEnd, capturedDuration)
+            .then(() => {
+                waitingForUserResponse = false
+            })
+            .catch((error) => {
+                console.error('Error showing idle dialog:', error)
+                waitingForUserResponse = false
+            })
+    } else if (!isTimerRunning) {
+        // If timer is not running, just save the idle period automatically
+        saveActivityPeriod(capturedIdleStart, capturedIdleEnd, true)
+    }
+}
+
+function registerPowerMonitorEvents() {
+    if (powerEventsRegistered) return
+    powerEventsRegistered = true
+
+    powerMonitor.on('suspend', () => {
+        console.log('powerMonitor: system suspend')
+        transitionToIdle(dayjs())
+    })
+
+    powerMonitor.on('lock-screen', () => {
+        console.log('powerMonitor: screen locked')
+        transitionToIdle(dayjs())
+    })
+
+    powerMonitor.on('resume', () => {
+        console.log('powerMonitor: system resume')
+        transitionToActive()
+    })
+
+    powerMonitor.on('unlock-screen', () => {
+        console.log('powerMonitor: screen unlocked')
+        transitionToActive()
+    })
+}
+
 function startIdleMonitoring() {
     if (idleCheckInterval) {
         console.log('Idle monitoring already running, skipping start')
@@ -121,70 +206,10 @@ function startIdleMonitoring() {
         const idleTime = powerMonitor.getSystemIdleTime()
 
         if (idleTime >= idleThreshold) {
-            // System has been idle for longer than threshold
-            if (!isIdle) {
-                // Transition to idle state
-                isIdle = true
-                const now = dayjs()
-                idleStartTime = now.subtract(idleTime, 'seconds')
-
-                console.log(`System became idle at ${idleStartTime.toISOString()}`)
-
-                // Save the active period that just ended
-                if (activeStartTime) {
-                    // Ensure the end time is not before the start time due to timing precision
-                    const endTime = idleStartTime.isBefore(activeStartTime)
-                        ? activeStartTime
-                        : idleStartTime
-
-                    saveActivityPeriod(
-                        activeStartTime.utc().format(),
-                        endTime.utc().format(),
-                        false
-                    )
-                    activeStartTime = null
-                }
-            }
+            const now = dayjs()
+            transitionToIdle(now.subtract(idleTime, 'seconds'))
         } else {
-            // System is active
-            if (isIdle && idleStartTime) {
-                // Transition from idle to active
-                const idleEnd = dayjs()
-                const idleDurationSeconds = idleEnd.diff(idleStartTime, 'seconds')
-
-                console.log(
-                    `System became active at ${idleEnd.toISOString()}, idle duration: ${idleDurationSeconds}s`
-                )
-
-                // Capture the idle period info before resetting state
-                const capturedIdleStart = idleStartTime.utc().format()
-                const capturedIdleEnd = idleEnd.utc().format()
-                const capturedDuration = idleDurationSeconds
-
-                // Reset idle state and resume activity tracking immediately
-                isIdle = false
-                idleStartTime = null
-                activeStartTime = idleEnd
-
-                // Only show dialog if timer is running and we're not already waiting for a response
-                // This prevents multiple dialogs from appearing
-                if (isTimerRunning && !waitingForUserResponse) {
-                    waitingForUserResponse = true
-
-                    // Show dialog asynchronously without blocking the interval
-                    showIdleDialog(capturedIdleStart, capturedIdleEnd, capturedDuration)
-                        .then(() => {
-                            waitingForUserResponse = false
-                        })
-                        .catch((error) => {
-                            console.error('Error showing idle dialog:', error)
-                            waitingForUserResponse = false
-                        })
-                } else if (!isTimerRunning) {
-                    // If timer is not running, just save the idle period automatically
-                    saveActivityPeriod(capturedIdleStart, capturedIdleEnd, true)
-                }
-            }
+            transitionToActive()
         }
     }, 1000)
 }
