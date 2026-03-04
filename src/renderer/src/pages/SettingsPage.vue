@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { PrimaryButton, SecondaryButton, Checkbox, LoadingSpinner, Modal } from '@solidtime/ui'
+import {
+    Button,
+    PrimaryButton,
+    SecondaryButton,
+    Checkbox,
+    LoadingSpinner,
+    Modal,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '@solidtime/ui'
 import { logout } from '../utils/oauth.ts'
 import {
     isWidgetActivated,
@@ -10,8 +21,17 @@ import {
 } from '../utils/settings.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
+import {
+    useDeleteAllWindowActivitiesMutation,
+    useDeleteWindowActivitiesInRangeMutation,
+    useDeleteAllActivityPeriodsMutation,
+    useDeleteActivityPeriodsInRangeMutation,
+    useClearIconCacheMutation,
+} from '../utils/windowActivities.ts'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { dayjs } from '../utils/dayjs.ts'
+import { EllipsisVerticalIcon } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
 const queryClient = useQueryClient()
@@ -31,10 +51,74 @@ const hasPermission = ref(false)
 const showDeleteWindowActivitiesModal = ref(false)
 const showDeleteActivityPeriodsModal = ref(false)
 const showDeleteIconCacheModal = ref(false)
-const isDeletingWindowActivities = ref(false)
-const isDeletingActivityPeriods = ref(false)
-const isDeletingIconCache = ref(false)
 const myData = computed(() => data.value?.data)
+
+const { mutate: deleteAllWindowActivities, isPending: isDeletingWindowActivities } =
+    useDeleteAllWindowActivitiesMutation()
+const { mutate: deleteWindowActivitiesInRange, isPending: isDeletingWindowActivitiesRange } =
+    useDeleteWindowActivitiesInRangeMutation()
+const { mutate: deleteAllActivityPeriods, isPending: isDeletingActivityPeriods } =
+    useDeleteAllActivityPeriodsMutation()
+const { mutate: deleteActivityPeriodsInRange, isPending: isDeletingActivityPeriodsRange } =
+    useDeleteActivityPeriodsInRangeMutation()
+const { mutate: clearIconCache, isPending: isDeletingIconCache } = useClearIconCacheMutation()
+
+// Time-range dropdown state
+const showWindowActivitiesDropdown = ref(false)
+const showActivityPeriodsDropdown = ref(false)
+
+// Time-range delete modal state
+const showDeleteWindowActivitiesRangeModal = ref(false)
+const showDeleteActivityPeriodsRangeModal = ref(false)
+const selectedRangeLabel = ref('')
+const selectedRangeStart = ref('')
+const selectedRangeEnd = ref('')
+
+type TimeRangeOption = { label: string; minutes: number }
+
+const timeRangeOptions: TimeRangeOption[] = [
+    { label: 'Last 15 minutes', minutes: 15 },
+    { label: 'Last hour', minutes: 60 },
+    { label: 'Last 24 hours', minutes: 60 * 24 },
+    { label: 'Last 7 days', minutes: 60 * 24 * 7 },
+    { label: 'Last 4 weeks', minutes: 60 * 24 * 28 },
+]
+
+function computeRange(minutes: number) {
+    const end = dayjs().utc().format()
+    const start = dayjs().subtract(minutes, 'minutes').utc().format()
+    return { start, end }
+}
+
+function openWindowActivitiesRangeModal(option: TimeRangeOption) {
+    const range = computeRange(option.minutes)
+    selectedRangeLabel.value = option.label
+    selectedRangeStart.value = range.start
+    selectedRangeEnd.value = range.end
+    showDeleteWindowActivitiesRangeModal.value = true
+}
+
+function openActivityPeriodsRangeModal(option: TimeRangeOption) {
+    const range = computeRange(option.minutes)
+    selectedRangeLabel.value = option.label
+    selectedRangeStart.value = range.start
+    selectedRangeEnd.value = range.end
+    showDeleteActivityPeriodsRangeModal.value = true
+}
+
+function confirmDeleteWindowActivitiesRange() {
+    deleteWindowActivitiesInRange(
+        { start: selectedRangeStart.value, end: selectedRangeEnd.value },
+        { onSettled: () => (showDeleteWindowActivitiesRangeModal.value = false) }
+    )
+}
+
+function confirmDeleteActivityPeriodsRange() {
+    deleteActivityPeriodsInRange(
+        { start: selectedRangeStart.value, end: selectedRangeEnd.value },
+        { onSettled: () => (showDeleteActivityPeriodsRangeModal.value = false) }
+    )
+}
 
 function onLogoutClick() {
     logout(queryClient)
@@ -89,55 +173,22 @@ function closeManualInstructions() {
 function reopenPermissionModal() {
     showPermissionModal.value = true
 }
-async function confirmDeleteWindowActivities() {
-    isDeletingWindowActivities.value = true
-    try {
-        const result = await window.electronAPI.deleteAllWindowActivities()
-        if (result.success) {
-            console.log('Window activities deleted successfully')
-        } else {
-            console.error('Failed to delete window activities:', result.error)
-        }
-    } catch (error) {
-        console.error('Error deleting window activities:', error)
-    } finally {
-        isDeletingWindowActivities.value = false
-        showDeleteWindowActivitiesModal.value = false
-    }
+function confirmDeleteWindowActivities() {
+    deleteAllWindowActivities(undefined, {
+        onSettled: () => (showDeleteWindowActivitiesModal.value = false),
+    })
 }
 
-async function confirmDeleteActivityPeriods() {
-    isDeletingActivityPeriods.value = true
-    try {
-        const result = await window.electronAPI.deleteAllActivityPeriods()
-        if (result.success) {
-            console.log('Activity periods deleted successfully')
-        } else {
-            console.error('Failed to delete activity periods:', result.error)
-        }
-    } catch (error) {
-        console.error('Error deleting activity periods:', error)
-    } finally {
-        isDeletingActivityPeriods.value = false
-        showDeleteActivityPeriodsModal.value = false
-    }
+function confirmDeleteActivityPeriods() {
+    deleteAllActivityPeriods(undefined, {
+        onSettled: () => (showDeleteActivityPeriodsModal.value = false),
+    })
 }
 
-async function confirmDeleteIconCache() {
-    isDeletingIconCache.value = true
-    try {
-        const result = await window.electronAPI.clearIconCache()
-        if (result.success) {
-            console.log('Icon cache cleared successfully')
-        } else {
-            console.error('Failed to clear icon cache')
-        }
-    } catch (error) {
-        console.error('Error clearing icon cache:', error)
-    } finally {
-        isDeletingIconCache.value = false
-        showDeleteIconCacheModal.value = false
-    }
+function confirmDeleteIconCache() {
+    clearIconCache(undefined, {
+        onSettled: () => (showDeleteIconCacheModal.value = false),
+    })
 }
 
 onMounted(async () => {
@@ -194,10 +245,10 @@ watch(activityTrackingEnabled, (enabled) => {
                             class="rounded-full w-14 h-14 object-cover"
                             alt="Profile image" />
                         <div>
-                            <div class="text-sm text-muted py-0.5">
+                            <div class="text-sm text-muted-foreground py-0.5">
                                 <strong>Name:</strong> {{ myData.name }}
                             </div>
-                            <div class="text-sm text-muted py-0.5">
+                            <div class="text-sm text-muted-foreground py-0.5">
                                 <strong>Email:</strong> {{ myData.email }}
                             </div>
                         </div>
@@ -239,7 +290,7 @@ watch(activityTrackingEnabled, (enabled) => {
                         <span class="ms-2 text-sm">Enable Window Activity Tracking</span>
                     </label>
                     <div v-if="activityTrackingEnabled" class="ml-6 space-y-2">
-                        <div class="text-xs text-muted">
+                        <div class="text-xs text-muted-foreground">
                             Tracks the active window and application to show detailed activity in
                             the calendar.
                         </div>
@@ -283,39 +334,87 @@ watch(activityTrackingEnabled, (enabled) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <div class="text-sm font-medium">Window Activities</div>
-                            <div class="text-xs text-muted">
+                            <div class="text-xs text-muted-foreground">
                                 Delete all tracked window activities and application usage data
                             </div>
                         </div>
-                        <SecondaryButton
-                            class="text-red-500 hover:text-red-600"
-                            @click="showDeleteWindowActivitiesModal = true">
-                            Delete All
-                        </SecondaryButton>
+                        <div class="flex items-center">
+                            <Button
+                                variant="outline"
+                                class="rounded-r-none border-r-0"
+                                @click="showDeleteWindowActivitiesModal = true">
+                                Delete All
+                            </Button>
+                            <DropdownMenu v-model:open="showWindowActivitiesDropdown">
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        data-testid="window-activities-range-button"
+                                        class="rounded-l-none">
+                                        <EllipsisVerticalIcon class="w-4 h-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        v-for="option in timeRangeOptions"
+                                        :key="option.label"
+                                        :data-testid="'wa-range-' + option.minutes"
+                                        class="cursor-pointer"
+                                        @click="openWindowActivitiesRangeModal(option)">
+                                        {{ option.label }}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                     <div class="flex items-center justify-between">
                         <div>
                             <div class="text-sm font-medium">Activity Periods</div>
-                            <div class="text-xs text-muted">
+                            <div class="text-xs text-muted-foreground">
                                 Delete all idle and active period records
                             </div>
                         </div>
-                        <SecondaryButton
-                            class="text-red-500 hover:text-red-600"
-                            @click="showDeleteActivityPeriodsModal = true">
-                            Delete All
-                        </SecondaryButton>
+                        <div class="flex items-center">
+                            <Button
+                                variant="outline"
+                                class="rounded-r-none border-r-0"
+                                @click="showDeleteActivityPeriodsModal = true">
+                                Delete All
+                            </Button>
+                            <DropdownMenu v-model:open="showActivityPeriodsDropdown">
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        data-testid="activity-periods-range-button"
+                                        class="rounded-l-none">
+                                        <EllipsisVerticalIcon class="w-4 h-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        v-for="option in timeRangeOptions"
+                                        :key="option.label"
+                                        :data-testid="'ap-range-' + option.minutes"
+                                        class="cursor-pointer"
+                                        @click="openActivityPeriodsRangeModal(option)">
+                                        {{ option.label }}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                     <div class="flex items-center justify-between">
                         <div>
                             <div class="text-sm font-medium">Icon Cache</div>
-                            <div class="text-xs text-muted">Clear cached application icons</div>
+                            <div class="text-xs text-muted-foreground">
+                                Clear cached application icons
+                            </div>
                         </div>
-                        <SecondaryButton
-                            class="text-red-500 hover:text-red-600"
-                            @click="showDeleteIconCacheModal = true">
+                        <Button variant="outline" @click="showDeleteIconCacheModal = true">
                             Clear Cache
-                        </SecondaryButton>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -329,7 +428,7 @@ watch(activityTrackingEnabled, (enabled) => {
                 Improve Activity Tracking
             </div>
 
-            <div class="text-sm text-muted space-y-3">
+            <div class="text-sm text-muted-foreground space-y-3">
                 <p>
                     Activity tracking is now enabled! To capture window titles and improve detection
                     accuracy, grant screen recording permission.
@@ -338,7 +437,7 @@ watch(activityTrackingEnabled, (enabled) => {
                     <strong>Your privacy matters:</strong> All data is stored locally on your device
                     and is never transmitted to external servers.
                 </p>
-                <p class="text-xs text-muted">
+                <p class="text-xs text-muted-foreground">
                     Without this permission, activity tracking will still work but may have limited
                     information about window titles.
                 </p>
@@ -365,7 +464,7 @@ watch(activityTrackingEnabled, (enabled) => {
                 Manually Grant Screen Recording Permission
             </div>
 
-            <div class="text-sm text-muted space-y-4">
+            <div class="text-sm text-muted-foreground space-y-4">
                 <p>
                     If you do not get a permission popup you can manually grant screen recording
                     permission in macOS System Settings.
@@ -415,7 +514,7 @@ watch(activityTrackingEnabled, (enabled) => {
                 Delete Window Activities
             </div>
 
-            <div class="text-sm text-muted space-y-3">
+            <div class="text-sm text-muted-foreground space-y-3">
                 <p>
                     Are you sure you want to delete all window activities? This will permanently
                     remove all tracked application usage and window title data.
@@ -454,7 +553,7 @@ watch(activityTrackingEnabled, (enabled) => {
                 Delete Activity Periods
             </div>
 
-            <div class="text-sm text-muted space-y-3">
+            <div class="text-sm text-muted-foreground space-y-3">
                 <p>
                     Are you sure you want to delete all activity periods? This will permanently
                     remove all idle and active period records.
@@ -491,12 +590,12 @@ watch(activityTrackingEnabled, (enabled) => {
         <div class="px-6 py-4">
             <div class="text-lg font-medium text-white mb-4" role="heading">Clear Icon Cache</div>
 
-            <div class="text-sm text-muted space-y-3">
+            <div class="text-sm text-muted-foreground space-y-3">
                 <p>
                     Are you sure you want to clear the icon cache? This will remove all cached
                     application icons. They will be re-downloaded when needed.
                 </p>
-                <p class="text-xs text-muted">
+                <p class="text-xs text-muted-foreground">
                     Note: This is a safe operation and will not delete any activity data.
                 </p>
             </div>
@@ -513,6 +612,87 @@ watch(activityTrackingEnabled, (enabled) => {
                 <div class="flex items-center">
                     <LoadingSpinner v-if="isDeletingIconCache"></LoadingSpinner>
                     <span>{{ isDeletingIconCache ? 'Clearing...' : 'Clear Cache' }}</span>
+                </div>
+            </PrimaryButton>
+        </div>
+    </Modal>
+
+    <!-- Delete Window Activities in Range Confirmation Modal -->
+    <Modal
+        :show="showDeleteWindowActivitiesRangeModal"
+        :maxWidth="'2xl'"
+        :closeable="!isDeletingWindowActivitiesRange"
+        @close="showDeleteWindowActivitiesRangeModal = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-white mb-4" role="heading">
+                Delete Window Activities
+            </div>
+
+            <div class="text-sm text-muted-foreground space-y-3">
+                <p>
+                    Are you sure you want to delete window activities from the
+                    <strong>{{ selectedRangeLabel.toLowerCase() }}</strong
+                    >? This will permanently remove tracked application usage and window title data
+                    for that period.
+                </p>
+                <p class="text-red-500 font-medium">This action cannot be undone.</p>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
+            <SecondaryButton
+                :disabled="isDeletingWindowActivitiesRange"
+                @click="showDeleteWindowActivitiesRangeModal = false"
+                >Cancel</SecondaryButton
+            >
+            <PrimaryButton
+                :disabled="isDeletingWindowActivitiesRange"
+                class="bg-red-600 hover:bg-red-700"
+                @click="confirmDeleteWindowActivitiesRange">
+                <div class="flex items-center">
+                    <LoadingSpinner v-if="isDeletingWindowActivitiesRange"></LoadingSpinner>
+                    <span>{{ isDeletingWindowActivitiesRange ? 'Deleting...' : 'Delete' }}</span>
+                </div>
+            </PrimaryButton>
+        </div>
+    </Modal>
+
+    <!-- Delete Activity Periods in Range Confirmation Modal -->
+    <Modal
+        :show="showDeleteActivityPeriodsRangeModal"
+        :maxWidth="'2xl'"
+        :closeable="!isDeletingActivityPeriodsRange"
+        @close="showDeleteActivityPeriodsRangeModal = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-white mb-4" role="heading">
+                Delete Activity Periods
+            </div>
+
+            <div class="text-sm text-muted-foreground space-y-3">
+                <p>
+                    Are you sure you want to delete activity periods from the
+                    <strong>{{ selectedRangeLabel.toLowerCase() }}</strong
+                    >? This will permanently remove idle and active period records for that period.
+                </p>
+                <p class="text-red-500 font-medium">This action cannot be undone.</p>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
+            <SecondaryButton
+                :disabled="isDeletingActivityPeriodsRange"
+                @click="showDeleteActivityPeriodsRangeModal = false"
+                >Cancel</SecondaryButton
+            >
+            <PrimaryButton
+                :disabled="isDeletingActivityPeriodsRange"
+                class="bg-red-600 hover:bg-red-700"
+                @click="confirmDeleteActivityPeriodsRange">
+                <div class="flex items-center">
+                    <LoadingSpinner v-if="isDeletingActivityPeriodsRange"></LoadingSpinner>
+                    <span>{{ isDeletingActivityPeriodsRange ? 'Deleting...' : 'Delete' }}</span>
                 </div>
             </PrimaryButton>
         </div>

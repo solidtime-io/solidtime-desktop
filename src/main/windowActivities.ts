@@ -21,6 +21,33 @@ async function deleteAllWindowActivities(): Promise<{ success: boolean; error?: 
 }
 
 /**
+ * Deletes window activities within a specific date range
+ */
+async function deleteWindowActivitiesInRange(
+    startDate: string,
+    endDate: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .delete(windowActivities)
+            .where(
+                and(
+                    gte(windowActivities.timestamp, startDate),
+                    lte(windowActivities.timestamp, endDate)
+                )
+            )
+        console.log(`Window activities deleted for range ${startDate} - ${endDate}`)
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to delete window activities in range:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+        }
+    }
+}
+
+/**
  * Registers IPC handlers for window activities
  */
 export function registerWindowActivitiesHandlers() {
@@ -82,4 +109,12 @@ export function registerWindowActivitiesHandlers() {
     ipcMain.handle('deleteAllWindowActivities', async () => {
         return deleteAllWindowActivities()
     })
+
+    // Delete window activities in a date range
+    ipcMain.handle(
+        'deleteWindowActivitiesInRange',
+        async (_event, startDate: string, endDate: string) => {
+            return deleteWindowActivitiesInRange(startDate, endDate)
+        }
+    )
 }

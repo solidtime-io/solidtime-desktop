@@ -60,6 +60,14 @@ export interface IElectronAPI {
     requestScreenRecordingPermission: () => Promise<boolean>
     deleteAllWindowActivities: () => Promise<{ success: boolean; error?: string }>
     deleteAllActivityPeriods: () => Promise<{ success: boolean; error?: string }>
+    deleteWindowActivitiesInRange: (
+        startDate: string,
+        endDate: string
+    ) => Promise<{ success: boolean; error?: string }>
+    deleteActivityPeriodsInRange: (
+        startDate: string,
+        endDate: string
+    ) => Promise<{ success: boolean; error?: string }>
 }
 
 declare global {
