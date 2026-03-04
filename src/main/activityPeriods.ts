@@ -22,6 +22,28 @@ async function deleteAllActivityPeriods(): Promise<{ success: boolean; error?: s
     }
 }
 
+/**
+ * Deletes activity periods within a specific date range
+ */
+async function deleteActivityPeriodsInRange(
+    startDate: string,
+    endDate: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db
+            .delete(activityPeriods)
+            .where(and(gte(activityPeriods.start, startDate), lte(activityPeriods.end, endDate)))
+        console.log(`Activity periods deleted for range ${startDate} - ${endDate}`)
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to delete activity periods in range:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+        }
+    }
+}
+
 // Type definitions for activity period responses
 interface WindowActivityInPeriod {
     appName: string
@@ -372,4 +394,12 @@ export function registerActivityPeriodListeners(): void {
     ipcMain.handle('deleteAllActivityPeriods', async () => {
         return deleteAllActivityPeriods()
     })
+
+    // Delete activity periods in a date range
+    ipcMain.handle(
+        'deleteActivityPeriodsInRange',
+        async (_event, startDate: string, endDate: string) => {
+            return deleteActivityPeriodsInRange(startDate, endDate)
+        }
+    )
 }

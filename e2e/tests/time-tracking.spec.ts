@@ -16,10 +16,7 @@ test.describe('Time tracking', () => {
         await expect(project).toBeVisible({ timeout: 10000 })
     })
 
-    test('startTimer uses current UI values, not last entry values', async ({
-        page,
-        electronApp,
-    }) => {
+    test('startTimer uses current UI values, not last entry values', async ({ page }) => {
         const timer = page.getByTestId('dashboard_timer')
         const descriptionInput = timer.getByTestId('time_entry_description')
         await expect(descriptionInput).toBeVisible({ timeout: 10000 })

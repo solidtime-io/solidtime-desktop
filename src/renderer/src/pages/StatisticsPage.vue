@@ -1,17 +1,57 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
 import { computed, ref } from 'vue'
-import { LoadingSpinner, Accordion, DateRangePicker } from '@solidtime/ui'
+import {
+    Button,
+    LoadingSpinner,
+    Accordion,
+    DateRangePicker,
+    Modal,
+    PrimaryButton,
+    SecondaryButton,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '@solidtime/ui'
 import { useMyMemberships } from '../utils/myMemberships.ts'
-import { getWindowActivityStats } from '../utils/windowActivities.ts'
+import {
+    getWindowActivityStats,
+    useDeleteWindowActivitiesInRangeMutation,
+} from '../utils/windowActivities.ts'
 import { activityTrackingEnabled } from '../utils/settings.ts'
 import type { WindowActivityStats } from '../../../preload/interface'
 import StatisticsCard from '../components/StatisticsCard.vue'
 import { dayjs } from '../utils/dayjs.ts'
 import { useAppIcons } from '../utils/appIcons.ts'
+import { EllipsisVerticalIcon, ArrowPathIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
 const { currentOrganizationId } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
+
+// Three-dot dropdown state
+const showActionsDropdown = ref(false)
+
+// Delete confirmation modal state
+const showDeleteRangeModal = ref(false)
+
+const { mutate: deleteWindowActivitiesInRange, isPending: isDeletingRange } =
+    useDeleteWindowActivitiesInRangeMutation()
+
+function handleRefresh() {
+    refetch()
+}
+
+function openDeleteRangeModal() {
+    showDeleteRangeModal.value = true
+}
+
+function confirmDeleteRange() {
+    deleteWindowActivitiesInRange(
+        { start: dateRange.value.start, end: dateRange.value.end },
+        { onSettled: () => (showDeleteRangeModal.value = false) }
+    )
+}
 
 // Date range for statistics (default to last 7 days)
 const start = ref(dayjs().subtract(7, 'days').startOf('day').format())
@@ -23,7 +63,11 @@ const dateRange = computed(() => ({
 }))
 
 // Fetch window activity stats
-const { data: windowActivityStatsData, isLoading } = useQuery<WindowActivityStats[]>({
+const {
+    data: windowActivityStatsData,
+    isLoading,
+    refetch,
+} = useQuery<WindowActivityStats[]>({
     queryKey: computed(() => [
         'windowActivityStats',
         {
@@ -186,12 +230,40 @@ const totalTime = computed(() => {
                                     Total time: {{ totalTime }}
                                 </p>
                             </div>
-                            <div>
+                            <div class="flex items-center gap-2">
                                 <DateRangePicker
                                     :start="start"
                                     :end="end"
                                     @update:start="start = $event"
                                     @update:end="end = $event" />
+                                <DropdownMenu v-model:open="showActionsDropdown">
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            data-testid="statistics-actions-button"
+                                            title="More actions">
+                                            <EllipsisVerticalIcon class="w-5 h-5" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" class="min-w-[200px]">
+                                        <DropdownMenuItem
+                                            data-testid="refresh-button"
+                                            :disabled="isLoading"
+                                            class="cursor-pointer"
+                                            @click="handleRefresh">
+                                            <ArrowPathIcon class="w-4 h-4" />
+                                            Refresh statistics
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            data-testid="delete-range-button"
+                                            class="cursor-pointer text-red-500 focus:text-red-500"
+                                            @click="openDeleteRangeModal">
+                                            <TrashIcon class="w-4 h-4 text-red-500" />
+                                            Delete activity in range
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </div>
                     </div>
@@ -225,4 +297,44 @@ const totalTime = computed(() => {
             </div>
         </template>
     </div>
+
+    <!-- Delete Window Activities in Range Confirmation Modal -->
+    <Modal
+        :show="showDeleteRangeModal"
+        :maxWidth="'2xl'"
+        :closeable="!isDeletingRange"
+        @close="showDeleteRangeModal = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-white mb-4" role="heading">
+                Delete Window Activities
+            </div>
+
+            <div class="text-sm text-muted-foreground space-y-3">
+                <p>
+                    Are you sure you want to delete all window activities in the selected date
+                    range? This will permanently remove activity data from
+                    <strong>{{ dayjs(start).format('MMM D, YYYY') }}</strong> to
+                    <strong>{{ dayjs(end).format('MMM D, YYYY') }}</strong
+                    >.
+                </p>
+                <p class="text-red-500 font-medium">This action cannot be undone.</p>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-row justify-end px-6 py-4 border-t space-x-2 border-card-background-separator bg-default-background rounded-b-2xl text-end">
+            <SecondaryButton :disabled="isDeletingRange" @click="showDeleteRangeModal = false"
+                >Cancel</SecondaryButton
+            >
+            <PrimaryButton
+                :disabled="isDeletingRange"
+                class="bg-red-600 hover:bg-red-700"
+                @click="confirmDeleteRange">
+                <div class="flex items-center">
+                    <LoadingSpinner v-if="isDeletingRange"></LoadingSpinner>
+                    <span>{{ isDeletingRange ? 'Deleting...' : 'Delete' }}</span>
+                </div>
+            </PrimaryButton>
+        </div>
+    </Modal>
 </template>

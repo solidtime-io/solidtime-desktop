@@ -59,6 +59,10 @@ if (process.contextIsolated || true) {
                 ipcRenderer.invoke('requestScreenRecordingPermission'),
             deleteAllWindowActivities: () => ipcRenderer.invoke('deleteAllWindowActivities'),
             deleteAllActivityPeriods: () => ipcRenderer.invoke('deleteAllActivityPeriods'),
+            deleteWindowActivitiesInRange: (startDate: string, endDate: string) =>
+                ipcRenderer.invoke('deleteWindowActivitiesInRange', startDate, endDate),
+            deleteActivityPeriodsInRange: (startDate: string, endDate: string) =>
+                ipcRenderer.invoke('deleteActivityPeriodsInRange', startDate, endDate),
         })
     } catch (error) {
         console.error(error)
