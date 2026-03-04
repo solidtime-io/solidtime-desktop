@@ -29,7 +29,7 @@ function scheduleHideUpdateProgressBar() {
     <Transition name="fade">
         <div
             v-if="showUpdateProgressBar"
-            class="text-muted text-sm font-medium flex items-center space-x-2 px-2">
+            class="text-muted-foreground text-sm font-medium flex items-center space-x-2 px-2">
             <LoadingSpinner v-if="variables.length > 0" class="h-4 w-4 mr-0"></LoadingSpinner>
             <CheckCircleIcon v-else class="h-4 w-4"></CheckCircleIcon>
             <span v-if="variables.length"> {{ variables.length }} Updates pending </span>
