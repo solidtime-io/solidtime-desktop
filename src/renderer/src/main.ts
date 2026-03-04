@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
-import '@solidtime/ui/style.css'
 import { VueQueryPlugin, type VueQueryPluginOptions } from '@tanstack/vue-query'
 import router from './router'
 

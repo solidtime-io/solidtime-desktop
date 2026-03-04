@@ -302,7 +302,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
             <div class="flex bg-primary dark:bg-background">
                 <div class="pl-4 pb-4 pt-4 border-b border-border-primary z-10 w-full top-0 left-0">
                     <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
-                    <div class="relative">
+                    <div class="relative pt-1.5">
                         <TimeTrackerRunningInDifferentOrganizationOverlay
                             v-if="
                                 currentTimeEntry.organization_id &&
@@ -333,7 +333,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                             @update-time-entry="updateCurrentTimeEntry"></TimeTrackerControls>
                     </div>
                 </div>
-                <div class="flex justify-center items-center pt-5 group pr-4">
+                <div class="flex justify-center items-center pt-9 group pr-4">
                     <TimeTrackerMoreOptionsDropdown
                         :hasActiveTimer="isActive"
                         @manual-entry="showManualTimeEntryModal = true"
@@ -412,7 +412,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                 <div v-if="timeEntries && timeEntries.length === 0" class="text-center pt-12">
                     <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>
                     <h3 class="text-white font-semibold">No time entries found</h3>
-                    <p class="pb-5 text-muted">Create your first time entry now!</p>
+                    <p class="pb-5 text-muted-foreground">Create your first time entry now!</p>
                 </div>
                 <div ref="loadMoreContainer">
                     <div
@@ -423,7 +423,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     </div>
                     <div
                         v-else-if="!hasNextPage && timeEntries && timeEntries.length > 0"
-                        class="flex justify-center items-center py-5 text-muted font-medium">
+                        class="flex justify-center items-center py-5 text-muted-foreground font-medium">
                         All time entries are loaded!
                     </div>
                 </div>
@@ -432,7 +432,9 @@ watch(isLoadMoreVisible, async (isVisible) => {
         <div v-else class="flex items-center justify-center h-full">
             <div class="flex flex-col items-center">
                 <LoadingSpinner class="ml-0 mr-0"></LoadingSpinner>
-                <span class="py-3 font-medium text-sm text-muted text-center">Fetching data</span>
+                <span class="py-3 font-medium text-sm text-muted-foreground text-center"
+                    >Fetching data</span
+                >
             </div>
         </div>
     </div>

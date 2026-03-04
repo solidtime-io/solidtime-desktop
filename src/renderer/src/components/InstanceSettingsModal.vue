@@ -42,7 +42,7 @@ function submit() {
         <div class="px-6 py-4">
             <div class="text-lg font-medium text-white" role="heading">Settings</div>
 
-            <div class="mt-4 text-sm text-muted flex flex-col justify-center">
+            <div class="mt-4 text-sm text-muted-foreground flex flex-col justify-center">
                 <InputLabel for="instanceEndpoint" value="Solidtime Instance Endpoint" />
                 <TextInput
                     id="instanceEndpoint"
@@ -54,7 +54,7 @@ function submit() {
                     @keydown.enter="submit()" />
             </div>
 
-            <div class="mt-4 text-sm text-muted flex flex-col justify-center">
+            <div class="mt-4 text-sm text-muted-foreground flex flex-col justify-center">
                 <InputLabel for="clientId" value="Solidtime Instance Client Id" />
                 <TextInput
                     id="clientId"

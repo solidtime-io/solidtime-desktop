@@ -30,7 +30,7 @@ const showUpdateIsInstalling = ref(false)
         class="w-screen h-screen left-0 text-white top-0 z-[100] absolute flex flex-col items-center justify-center bg-primary">
         <div v-if="!showUpdateIsInstalling" class="text-center">
             <h2 class="text-xl font-semibold">Update available!</h2>
-            <p class="py-1 text-muted max-w-xs text-center">
+            <p class="py-1 text-muted-foreground max-w-xs text-center">
                 There is a new update available for your solidtime desktop client.
             </p>
             <SecondaryButton class="mr-4" @click="showUpdateAvailableOverlay = false"
@@ -46,7 +46,9 @@ const showUpdateIsInstalling = ref(false)
         </div>
         <div v-else class="text-center flex flex-col space-y-2 items-center">
             <LoadingSpinner class="mr-0 ml-0"></LoadingSpinner>
-            <p class="py-1 text-muted max-w-xs text-center">The update is being installed...</p>
+            <p class="py-1 text-muted-foreground max-w-xs text-center">
+                The update is being installed...
+            </p>
         </div>
     </div>
 </template>
