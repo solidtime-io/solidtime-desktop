@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { SelectDropdown, Badge } from '@solidtime/ui'
+import {
+    Badge,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '@solidtime/ui'
 import { computed } from 'vue'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { ChevronDownIcon } from '@heroicons/vue/20/solid'
-import { type MyMembership } from '@solidtime/api'
 const { memberships } = useMyMemberships()
 const currentOrganization = computed(() => {
     return memberships.value?.find((membership) => membership.id === currentMembershipId.value)
@@ -12,20 +17,24 @@ const currentOrganization = computed(() => {
 </script>
 
 <template>
-    <SelectDropdown
-        v-model="currentMembershipId"
-        align="end"
-        :getKeyFromItem="(item: MyMembership) => item.id"
-        :getNameForItem="(item: MyMembership) => item.organization.name"
-        :items="memberships">
-        <template #trigger>
+    <DropdownMenu>
+        <DropdownMenuTrigger asChild>
             <Badge
                 class="cursor-pointer hover:bg-card-background border-border-primary transition space-x-2 flex">
                 <span> {{ currentOrganization }} </span>
-                <ChevronDownIcon class="w-5 text-muted"></ChevronDownIcon>
+                <ChevronDownIcon class="w-5 text-muted-foreground"></ChevronDownIcon>
             </Badge>
-        </template>
-    </SelectDropdown>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            <DropdownMenuItem
+                v-for="membership in memberships"
+                :key="membership.id"
+                class="cursor-pointer"
+                @click="currentMembershipId = membership.id">
+                {{ membership.organization.name }}
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+    </DropdownMenu>
 </template>
 
 <style scoped></style>
