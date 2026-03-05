@@ -51,7 +51,8 @@ function navigateTo(path: string) {
                         variant="ghost"
                         :class="[
                             'transition-colors text-text-tertiary w-11 h-11 [&_svg]:size-5',
-                            isActive(item.path) && 'text-text-primary shadow-xs bg-quaternary',
+                            isActive(item.path) &&
+                                'text-text-primary shadow-xs bg-quaternary hover:!bg-quaternary',
                         ]"
                         @click="navigateTo(item.path)">
                         <component :is="item.icon" class="w-16 h-16"></component>
