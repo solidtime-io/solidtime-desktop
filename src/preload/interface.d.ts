@@ -30,8 +30,9 @@ export interface IElectronAPI {
     showMiniWindow: () => void
     hideMiniWindow: () => void
     onUpdateAvailable: (callback: () => void) => void
+    onUpdateDownloaded: (callback: () => void) => void
     onUpdateNotAvailable: (callback: () => void) => void
-    triggerUpdate: () => void
+    installUpdate: () => void
     startTimer: () => void
     stopTimer: () => void
     onOpenDeeplink: (callback: (url: string) => Promise<void>) => void

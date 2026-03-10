@@ -43,6 +43,8 @@ const { data } = useQuery({
 
 const showUpdateNotAvailable = ref(false)
 const checkingForUpdate = ref(false)
+const downloadingUpdate = ref(false)
+const updateReadyToInstall = ref(false)
 const showErrorOnUpdateRequest = ref(false)
 const showPermissionModal = ref(false)
 const showManualInstructionsModal = ref(false)
@@ -125,8 +127,14 @@ function onLogoutClick() {
     router.push('/time')
 }
 
+let checkingForUpdateTimeout: ReturnType<typeof setTimeout> | null = null
+
 function triggerUpdate() {
     checkingForUpdate.value = true
+    if (checkingForUpdateTimeout) clearTimeout(checkingForUpdateTimeout)
+    checkingForUpdateTimeout = setTimeout(() => {
+        checkingForUpdate.value = false
+    }, 15000)
     window.electronAPI.updateAutoUpdater()
 }
 
@@ -197,7 +205,17 @@ onMounted(async () => {
         hasPermission.value = await window.electronAPI.checkScreenRecordingPermission()
     }
 
+    window.electronAPI.onUpdateAvailable(() => {
+        if (checkingForUpdateTimeout) clearTimeout(checkingForUpdateTimeout)
+        checkingForUpdate.value = false
+        downloadingUpdate.value = true
+    })
+    window.electronAPI.onUpdateDownloaded(() => {
+        downloadingUpdate.value = false
+        updateReadyToInstall.value = true
+    })
     window.electronAPI.onUpdateNotAvailable(() => {
+        if (checkingForUpdateTimeout) clearTimeout(checkingForUpdateTimeout)
         showUpdateNotAvailable.value = true
         checkingForUpdate.value = false
         setTimeout(() => {
@@ -205,9 +223,11 @@ onMounted(async () => {
         }, 5000)
     })
     window.electronAPI.onAutoUpdaterError(async () => {
+        if (checkingForUpdateTimeout) clearTimeout(checkingForUpdateTimeout)
         showUpdateNotAvailable.value = true
         showErrorOnUpdateRequest.value = true
         checkingForUpdate.value = false
+        downloadingUpdate.value = false
         setTimeout(() => {
             showUpdateNotAvailable.value = false
             showErrorOnUpdateRequest.value = false
@@ -313,10 +333,14 @@ watch(activityTrackingEnabled, (enabled) => {
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div class="flex items-center space-x-4">
-                    <SecondaryButton :disabled="checkingForUpdate" @click="triggerUpdate">
+                    <PrimaryButton v-if="updateReadyToInstall" @click="window.electronAPI.installUpdate()">
+                        Restart & Update
+                    </PrimaryButton>
+                    <SecondaryButton v-else :disabled="checkingForUpdate || downloadingUpdate" @click="triggerUpdate">
                         <div class="flex items-center">
-                            <LoadingSpinner v-if="checkingForUpdate"></LoadingSpinner>
-                            <span>Check for updates</span>
+                            <LoadingSpinner v-if="checkingForUpdate || downloadingUpdate"></LoadingSpinner>
+                            <span v-if="downloadingUpdate">Downloading update...</span>
+                            <span v-else>Check for updates</span>
                         </div>
                     </SecondaryButton>
                     <div v-if="showUpdateNotAvailable" class="flex text-sm text-text-primary">
