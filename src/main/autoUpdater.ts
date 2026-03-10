@@ -13,7 +13,7 @@ export function getAutoUpdater(): AppUpdater {
 }
 
 export function initializeAutoUpdater() {
-    getAutoUpdater().autoDownload = false
+    getAutoUpdater().autoDownload = true
     getAutoUpdater().autoInstallOnAppQuit = false
     getAutoUpdater().allowDowngrade = true
 }
@@ -33,17 +33,17 @@ export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) 
     })
 
     getAutoUpdater().addListener('update-downloaded', () => {
-        app.emit('before-quit')
-        setTimeout(() => {
-            getAutoUpdater().quitAndInstall()
-        }, 500)
+        mainWindow.webContents.send('updateDownloaded')
     })
 
     getAutoUpdater().addListener('error', (error) => {
         mainWindow.webContents.send('updateError', error.message)
     })
 
-    ipcMain.on('triggerUpdate', () => {
-        getAutoUpdater().downloadUpdate()
+    ipcMain.on('installUpdate', () => {
+        app.emit('before-quit')
+        setTimeout(() => {
+            getAutoUpdater().quitAndInstall()
+        }, 500)
     })
 }

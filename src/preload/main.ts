@@ -22,8 +22,9 @@ if (process.contextIsolated || true) {
             showMiniWindow: () => ipcRenderer.send('showMiniWindow'),
             hideMiniWindow: () => ipcRenderer.send('hideMiniWindow'),
             showMainWindow: () => ipcRenderer.send('showMainWindow'),
-            triggerUpdate: () => ipcRenderer.send('triggerUpdate'),
+            installUpdate: () => ipcRenderer.send('installUpdate'),
             onUpdateAvailable: (callback) => ipcRenderer.on('updateAvailable', () => callback()),
+            onUpdateDownloaded: (callback) => ipcRenderer.on('updateDownloaded', () => callback()),
             onUpdateNotAvailable: (callback) =>
                 ipcRenderer.on('updateNotAvailable', () => callback()),
             onAutoUpdaterError: (callback) =>
