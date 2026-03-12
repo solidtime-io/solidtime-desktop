@@ -90,6 +90,7 @@ const timeEntries = computed(() => {
 const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError } = useQuery({
     queryKey: ['currentTimeEntry'],
     queryFn: () => getCurrentTimeEntry(),
+    staleTime: 0, // Always refetch on window focus to catch external changes
 })
 
 // Update lastTimeEntry when timeEntries change
@@ -114,6 +115,10 @@ watch(currentTimeEntryResponse, () => {
     console.log(currentTimeEntryResponse.value)
     if (currentTimeEntryResponse.value?.data) {
         currentTimeEntry.value = { ...currentTimeEntryResponse.value?.data }
+    } else if (currentTimeEntry.value.id !== '') {
+        // Server says no active time entry, but we have one locally
+        // (e.g. stopped from another app) — clear it
+        currentTimeEntry.value = { ...emptyTimeEntry }
     }
 })
 
