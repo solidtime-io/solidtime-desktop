@@ -155,23 +155,51 @@ function registerPowerMonitorEvents() {
 
     powerMonitor.on('suspend', () => {
         console.log('powerMonitor: system suspend')
+        // Stop the polling interval BEFORE transitioning to idle
+        // to prevent a final tick from flipping state back to active
+        clearIdleCheckInterval()
         transitionToIdle(dayjs())
     })
 
     powerMonitor.on('lock-screen', () => {
         console.log('powerMonitor: screen locked')
+        clearIdleCheckInterval()
         transitionToIdle(dayjs())
     })
 
     powerMonitor.on('resume', () => {
         console.log('powerMonitor: system resume')
         transitionToActive()
+        restartIdleCheckInterval()
     })
 
     powerMonitor.on('unlock-screen', () => {
         console.log('powerMonitor: screen unlocked')
         transitionToActive()
+        restartIdleCheckInterval()
     })
+}
+
+function clearIdleCheckInterval() {
+    if (idleCheckInterval) {
+        clearInterval(idleCheckInterval)
+        idleCheckInterval = null
+    }
+}
+
+function restartIdleCheckInterval() {
+    if (!idleDetectionEnabled) return
+    clearIdleCheckInterval()
+    idleCheckInterval = setInterval(() => {
+        const idleTime = powerMonitor.getSystemIdleTime()
+
+        if (idleTime >= idleThreshold) {
+            const now = dayjs()
+            transitionToIdle(now.subtract(idleTime, 'seconds'))
+        } else {
+            transitionToActive()
+        }
+    }, 1000)
 }
 
 function startIdleMonitoring() {
@@ -202,16 +230,7 @@ function startIdleMonitoring() {
     }
 
     // Check idle state every second
-    idleCheckInterval = setInterval(() => {
-        const idleTime = powerMonitor.getSystemIdleTime()
-
-        if (idleTime >= idleThreshold) {
-            const now = dayjs()
-            transitionToIdle(now.subtract(idleTime, 'seconds'))
-        } else {
-            transitionToActive()
-        }
-    }, 1000)
+    restartIdleCheckInterval()
 }
 
 async function saveActivityPeriod(start: string, end: string, isIdlePeriod: boolean) {
@@ -296,10 +315,7 @@ async function stopIdleMonitoring() {
         await saveActivityPeriod(idleStartTime.toISOString(), now.toISOString(), true)
     }
 
-    if (idleCheckInterval) {
-        clearInterval(idleCheckInterval)
-        idleCheckInterval = null
-    }
+    clearIdleCheckInterval()
     isIdle = false
     idleStartTime = null
     activeStartTime = null
