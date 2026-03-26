@@ -90,6 +90,7 @@ interface RawWindowActivity {
     durationSeconds: number
     appName: string
     url: string | null
+    windowTitle: string | null
 }
 
 /**
@@ -106,6 +107,7 @@ async function fetchAllWindowActivitiesInRange(
                 durationSeconds: windowActivities.durationSeconds,
                 appName: windowActivities.appName,
                 url: windowActivities.url,
+                windowTitle: windowActivities.windowTitle,
             })
             .from(windowActivities)
             .where(
@@ -120,6 +122,7 @@ async function fetchAllWindowActivitiesInRange(
             durationSeconds: a.durationSeconds,
             appName: a.appName,
             url: a.url,
+            windowTitle: a.windowTitle,
         }))
     } catch (error) {
         console.error('Failed to fetch window activities in range:', error)
@@ -147,14 +150,19 @@ function bucketizeActivityPeriods(
         return []
     }
 
+    // Pre-parse period timestamps to avoid repeated Date parsing
+    const parsedPeriods = rawPeriods.map((period) => ({
+        start: new Date(period.start).getTime(),
+        end: new Date(period.end).getTime(),
+        isIdle: period.isIdle,
+    }))
+
     // Find the overall time range from all periods
     let minTime = Infinity
     let maxTime = -Infinity
-    for (const period of rawPeriods) {
-        const s = new Date(period.start).getTime()
-        const e = new Date(period.end).getTime()
-        if (s < minTime) minTime = s
-        if (e > maxTime) maxTime = e
+    for (const period of parsedPeriods) {
+        if (period.start < minTime) minTime = period.start
+        if (period.end > maxTime) maxTime = period.end
     }
 
     // Generate clock-aligned bucket boundaries
@@ -167,17 +175,13 @@ function bucketizeActivityPeriods(
     for (let bStart = bucketStart; bStart < bucketEnd; bStart += BUCKET_INTERVAL_MS) {
         const bEnd = bStart + BUCKET_INTERVAL_MS
 
-        // Calculate overlap with each raw period, split by idle/active
+        // Calculate overlap with each period
         let activeMs = 0
         let idleMs = 0
 
-        for (const period of rawPeriods) {
-            const pStart = new Date(period.start).getTime()
-            const pEnd = new Date(period.end).getTime()
-
-            // Calculate overlap between bucket [bStart, bEnd) and period [pStart, pEnd)
-            const overlapStart = Math.max(bStart, pStart)
-            const overlapEnd = Math.min(bEnd, pEnd)
+        for (const period of parsedPeriods) {
+            const overlapStart = Math.max(bStart, period.start)
+            const overlapEnd = Math.min(bEnd, period.end)
             const overlap = overlapEnd - overlapStart
 
             if (overlap > 0) {
@@ -203,10 +207,10 @@ function bucketizeActivityPeriods(
         const bucketEndISO = new Date(effectiveEnd).toISOString()
 
         // Aggregate window activities for this bucket
-        const bucketActivities = aggregateWindowActivitiesForBucket(
-            allWindowActivities,
-            bucketStartISO,
-            bucketEndISO
+        const bucketActivities = aggregateWindowActivitiesFromList(
+            allWindowActivities.filter(
+                (a) => a.timestamp >= bucketStartISO && a.timestamp <= bucketEndISO
+            )
         )
 
         result.push({
@@ -221,38 +225,49 @@ function bucketizeActivityPeriods(
 }
 
 /**
- * Filters and aggregates window activities for a specific bucket time range.
- * Returns top 5 activities by total duration.
+ * Extracts the hostname from a URL, or returns null if invalid.
  */
-function aggregateWindowActivitiesForBucket(
-    allActivities: RawWindowActivity[],
-    bucketStart: string,
-    bucketEnd: string
-): WindowActivityInPeriod[] {
-    // Filter activities that fall within this bucket
-    const filtered = allActivities.filter(
-        (a) => a.timestamp >= bucketStart && a.timestamp <= bucketEnd
-    )
+function extractDomain(url: string | null): string | null {
+    if (!url) return null
+    try {
+        return new URL(url).hostname
+    } catch {
+        return null
+    }
+}
 
-    if (filtered.length === 0) {
+/**
+ * Aggregates a pre-filtered list of window activities for a bucket.
+ * Groups by display name + window title. For websites, the display name is
+ * the domain (e.g. "github.com - Pull Request #42"). For regular apps, it's
+ * the app name (e.g. "VS Code - myproject/file.ts"). Returns top 5 activities
+ * by total duration.
+ */
+function aggregateWindowActivitiesFromList(
+    activities: RawWindowActivity[]
+): WindowActivityInPeriod[] {
+    if (activities.length === 0) {
         return []
     }
 
-    // Aggregate by appName + url
     const aggregated = new Map<
         string,
-        { appName: string; url: string | null; totalDuration: number }
+        { appName: string; label: string | null; totalDuration: number }
     >()
 
-    for (const activity of filtered) {
-        const key = `${activity.appName}::${activity.url ?? ''}`
+    for (const activity of activities) {
+        const domain = extractDomain(activity.url)
+        const windowTitle = activity.windowTitle === 'Untitled' ? null : activity.windowTitle
+        const displayName = domain || activity.appName
+        const label = windowTitle
+        const key = `${displayName}::${label ?? ''}`
         const existing = aggregated.get(key)
         if (existing) {
             existing.totalDuration += activity.durationSeconds
         } else {
             aggregated.set(key, {
-                appName: activity.appName,
-                url: activity.url,
+                appName: displayName,
+                label,
                 totalDuration: activity.durationSeconds,
             })
         }
@@ -264,7 +279,7 @@ function aggregateWindowActivitiesForBucket(
         .slice(0, 5)
         .map((a) => ({
             appName: a.appName,
-            url: a.url,
+            url: a.label,
             count: a.totalDuration,
         }))
 }
