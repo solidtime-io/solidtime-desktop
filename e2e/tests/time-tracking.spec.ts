@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures/electron-test'
 
 test.describe('Time tracking', () => {
     test('displays time entries', async ({ page }) => {
-        const entry = page.getByText('Implement navigation component')
+        const entry = page.getByText('Implement navigation component').first()
         await expect(entry).toBeVisible({ timeout: 10000 })
     })
 
@@ -12,7 +12,7 @@ test.describe('Time tracking', () => {
     })
 
     test('displays project names in time entries', async ({ page }) => {
-        const project = page.getByText('Website Redesign')
+        const project = page.getByText('Website Redesign').first()
         await expect(project).toBeVisible({ timeout: 10000 })
     })
 
