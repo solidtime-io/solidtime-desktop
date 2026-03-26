@@ -3,7 +3,6 @@ import TimePage from '../pages/TimePage.vue'
 import CalendarPage from '../pages/CalendarPage.vue'
 import StatisticsPage from '../pages/StatisticsPage.vue'
 import SettingsPage from '../pages/SettingsPage.vue'
-import { useQueryClient } from '@tanstack/vue-query'
 
 const routes = [
     {
@@ -35,11 +34,6 @@ const routes = [
 const router = createRouter({
     history: createWebHashHistory(),
     routes,
-})
-
-router.afterEach(() => {
-    const queryClient = useQueryClient()
-    queryClient.invalidateQueries()
 })
 
 export default router
