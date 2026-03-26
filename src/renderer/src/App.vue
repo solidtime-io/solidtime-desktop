@@ -164,8 +164,7 @@ whenever(cmdComma, () => {
                 <div class="flex-1 flex overflow-hidden">
                     <SidebarNavigation />
                     <router-view v-slot="{ Component }">
-                        <!-- full-calendar has an issue with keep-alive https://github.com/fullcalendar/fullcalendar/issues/7886 -->
-                        <keep-alive exclude="CalendarPage">
+                        <keep-alive>
                             <component :is="Component" />
                         </keep-alive>
                     </router-view>
