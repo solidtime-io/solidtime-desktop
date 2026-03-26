@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AccordionContent, AccordionItem, AccordionTrigger } from '@solidtime/ui'
+import { AccordionContent, AccordionItem, AccordionTrigger, Progress } from '@solidtime/ui'
 
 interface LabelItem {
     label: string | null
@@ -50,13 +50,7 @@ defineProps<Props>()
                                 {{ app.appName }}
                             </h3>
 
-                            <div class="w-full bg-border rounded-full h-2">
-                                <div
-                                    class="bg-accent h-2 rounded-full transition-all"
-                                    :style="{
-                                        width: `${Math.min(app.percentage, 100)}%`,
-                                    }"></div>
-                            </div>
+                            <Progress :model-value="Math.min(app.percentage, 100)" class="w-full" />
                         </div>
                     </div>
                     <div class="flex justify-end items-center gap-3 px-4 min-w-12">
