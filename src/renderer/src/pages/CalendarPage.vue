@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
-import { computed, ref } from 'vue'
+import { computed, onActivated, ref } from 'vue'
 import { TimeEntryCalendar, LoadingSpinner } from '@solidtime/ui'
 import { getAllProjects, useProjectCreateMutation } from '../utils/projects.ts'
 import { getAllTasks } from '../utils/tasks.ts'
@@ -119,6 +119,10 @@ const clients = computed(() => clientsResponse.value?.data ?? [])
 
 const queryClient = useQueryClient()
 
+onActivated(() => {
+    queryClient.invalidateQueries({ queryKey: ['timeEntry', 'calendar'] })
+})
+
 async function createTimeEntry(entry: Omit<TimeEntry, 'id' | 'organization_id' | 'user_id'>) {
     if (!currentOrganizationId.value || !currentMembershipId.value) {
         throw new Error('No organization or member selected')
@@ -217,6 +221,7 @@ const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
             end: expandedDateRange.value.end,
         },
     ]),
+    staleTime: 0,
     enabled: enableCalendarQuery,
     placeholderData: (previousData) => previousData,
     queryFn: async () => {

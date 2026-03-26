@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { computed, ref } from 'vue'
+import { computed, onActivated, ref } from 'vue'
 import {
     Button,
     LoadingSpinner,
@@ -75,6 +75,7 @@ const {
             end: dateRange.value.end,
         },
     ]),
+    staleTime: 0,
     enabled: computed(() => currentOrganizationLoaded.value && activityTrackingEnabled.value),
     placeholderData: (previousData) => previousData,
     queryFn: async () => {
@@ -85,6 +86,10 @@ const {
             return []
         }
     },
+})
+
+onActivated(() => {
+    refetch()
 })
 
 const windowActivityStats = computed(() => {
@@ -217,7 +222,7 @@ const totalTime = computed(() => {
             </div>
         </div>
         <template v-else>
-            <div class="flex-1 overflow-y-auto">
+            <div class="flex-1 overflow-y-scroll">
                 <div class="max-w-7xl mx-auto px-4 py-4">
                     <!-- Header -->
                     <div class="mb-4">
