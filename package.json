@@ -14,6 +14,7 @@
         "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
         "typecheck": "npm run typecheck:node && npm run typecheck:web",
         "start": "electron-vite preview",
+        "preview": "electron-vite preview",
         "dev": "electron-vite dev",
         "build": "npm run typecheck && electron-vite build",
         "postinstall": "electron-builder install-app-deps",
@@ -33,7 +34,7 @@
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
-        "@miniben90/x-win": "^3.2.0",
+        "@miniben90/x-win": "^3.3.0",
         "@sentry/electron": "^5.7.0",
         "@sentry/vite-plugin": "^2.22.8",
         "@solidtime/api": "^0.0.6",
