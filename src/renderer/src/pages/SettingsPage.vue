@@ -337,9 +337,7 @@ watch(activityTrackingEnabled, (enabled) => {
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div class="flex items-center space-x-4">
-                    <PrimaryButton
-                        v-if="updateReadyToInstall"
-                        @click="installUpdate">
+                    <PrimaryButton v-if="updateReadyToInstall" @click="installUpdate">
                         Restart & Update
                     </PrimaryButton>
                     <SecondaryButton

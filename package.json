@@ -24,7 +24,7 @@
         "build:linux": "npm run build && electron-builder --linux",
         "test:e2e": "npx playwright test --config=e2e/playwright.config.ts"
     },
-    "build:": {
+    "build": {
         "generateUpdatesFilesForAllChannels": true,
         "afterSign": "electron-builder-notarize",
         "mac": {
