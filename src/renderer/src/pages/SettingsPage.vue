@@ -333,12 +333,18 @@ watch(activityTrackingEnabled, (enabled) => {
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div class="flex items-center space-x-4">
-                    <PrimaryButton v-if="updateReadyToInstall" @click="window.electronAPI.installUpdate()">
+                    <PrimaryButton
+                        v-if="updateReadyToInstall"
+                        @click="window.electronAPI.installUpdate()">
                         Restart & Update
                     </PrimaryButton>
-                    <SecondaryButton v-else :disabled="checkingForUpdate || downloadingUpdate" @click="triggerUpdate">
+                    <SecondaryButton
+                        v-else
+                        :disabled="checkingForUpdate || downloadingUpdate"
+                        @click="triggerUpdate">
                         <div class="flex items-center">
-                            <LoadingSpinner v-if="checkingForUpdate || downloadingUpdate"></LoadingSpinner>
+                            <LoadingSpinner
+                                v-if="checkingForUpdate || downloadingUpdate"></LoadingSpinner>
                             <span v-if="downloadingUpdate">Downloading update...</span>
                             <span v-else>Check for updates</span>
                         </div>
