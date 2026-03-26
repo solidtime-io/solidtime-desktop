@@ -274,7 +274,9 @@ async function clearSelectionAndState() {
 
 // TODO: Fix me
 const currency = 'EUR'
-const organizationBillableRate = computed(() => (currentMembership.value?.organization?.billable_rate as number | null) ?? null)
+const organizationBillableRate = computed(
+    () => (currentMembership.value?.organization?.billable_rate as number | null) ?? null
+)
 
 const canCreateProjects = computed(() => {
     if (currentMembership.value) {
