@@ -50,7 +50,7 @@ defineProps<Props>()
                                 {{ app.appName }}
                             </h3>
 
-                            <Progress :model-value="Math.min(app.percentage, 100)" class="w-full" />
+                            <Progress :modelValue="Math.min(app.percentage, 100)" class="w-full" />
                         </div>
                     </div>
                     <div class="flex justify-end items-center gap-3 px-4 min-w-12">

@@ -129,6 +129,10 @@ function onLogoutClick() {
 
 let checkingForUpdateTimeout: ReturnType<typeof setTimeout> | null = null
 
+function installUpdate() {
+    window.electronAPI.installUpdate()
+}
+
 function triggerUpdate() {
     checkingForUpdate.value = true
     if (checkingForUpdateTimeout) clearTimeout(checkingForUpdateTimeout)
@@ -335,7 +339,7 @@ watch(activityTrackingEnabled, (enabled) => {
                 <div class="flex items-center space-x-4">
                     <PrimaryButton
                         v-if="updateReadyToInstall"
-                        @click="window.electronAPI.installUpdate()">
+                        @click="installUpdate">
                         Restart & Update
                     </PrimaryButton>
                     <SecondaryButton

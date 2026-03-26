@@ -309,6 +309,7 @@ const activityPeriodsWithIcons = computed<ActivityPeriod[]>(() => {
                 :loading="timeEntriesLoading"
                 :enableEstimatedTime="false"
                 :currency="currentMembership?.organization?.currency || 'USD'"
+                :organizationBillableRate="(currentMembership?.organization?.billable_rate as number | null) ?? null"
                 :canCreateProject="true"
                 :createTimeEntry="createTimeEntry"
                 :updateTimeEntry="updateTimeEntry"
