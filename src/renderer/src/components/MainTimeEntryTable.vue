@@ -274,6 +274,7 @@ async function clearSelectionAndState() {
 
 // TODO: Fix me
 const currency = 'EUR'
+const organizationBillableRate = computed(() => (currentMembership.value?.organization?.billable_rate as number | null) ?? null)
 
 const canCreateProjects = computed(() => {
     if (currentMembership.value) {
@@ -330,6 +331,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                             :createTag
                             :isActive
                             :currency
+                            :organizationBillableRate
                             :timeEntries="timeEntries"
                             @start-live-timer="startLiveTimer"
                             @stop-live-timer="stopLiveTimer"
@@ -347,6 +349,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                         v-model:show="showManualTimeEntryModal"
                         :enableEstimatedTime="false"
                         :currency
+                        :organizationBillableRate
                         :canCreateProject="canCreateProjects"
                         :createProject="createProject"
                         :createClient="createClient"
@@ -366,6 +369,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     :tasks
                     :tags
                     :currency
+                    :organizationBillableRate
                     :enableEstimatedTime="false"
                     :canCreateProject="canCreateProjects"
                     :projects
@@ -394,6 +398,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     :createProject
                     :createClient
                     :currency="currency"
+                    :organizationBillableRate
                     :enableEstimatedTime="false"
                     :canCreateProject="canCreateProjects"
                     :updateTimeEntry="
