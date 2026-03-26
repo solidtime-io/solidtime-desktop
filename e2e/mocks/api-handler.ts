@@ -6,7 +6,13 @@
  */
 
 import type { Page, Route } from '@playwright/test'
-import { createDefaultMockData, createTimeEntry } from './data'
+import {
+    createDefaultMockData,
+    createTimeEntry,
+    createProject,
+    createClient,
+    createTag,
+} from './data'
 
 export interface MockState {
     user: ReturnType<typeof createDefaultMockData>['user']
@@ -144,14 +150,32 @@ export async function setupApiMocks(page: Page): Promise<MockState> {
             return route.fallback()
         }
 
-        // GET /api/v1/organizations/:org/projects
-        if (pathname.match(/\/organizations\/[^/]+\/projects$/) && method === 'GET') {
-            return jsonResponse(route, { data: state.projects })
+        // /api/v1/organizations/:org/projects
+        if (pathname.match(/\/organizations\/[^/]+\/projects$/)) {
+            if (method === 'GET') {
+                return jsonResponse(route, { data: state.projects })
+            }
+            if (method === 'POST') {
+                const body = route.request().postDataJSON()
+                const newProject = createProject(state.organization.id, { ...body })
+                state.projects.push(newProject)
+                return jsonResponse(route, { data: newProject }, 201)
+            }
+            return route.fallback()
         }
 
-        // GET /api/v1/organizations/:org/tags
-        if (pathname.match(/\/organizations\/[^/]+\/tags$/) && method === 'GET') {
-            return jsonResponse(route, { data: state.tags })
+        // /api/v1/organizations/:org/tags
+        if (pathname.match(/\/organizations\/[^/]+\/tags$/)) {
+            if (method === 'GET') {
+                return jsonResponse(route, { data: state.tags })
+            }
+            if (method === 'POST') {
+                const body = route.request().postDataJSON()
+                const newTag = createTag({ ...body })
+                state.tags.push(newTag)
+                return jsonResponse(route, { data: newTag }, 201)
+            }
+            return route.fallback()
         }
 
         // GET /api/v1/organizations/:org/tasks
@@ -159,9 +183,18 @@ export async function setupApiMocks(page: Page): Promise<MockState> {
             return jsonResponse(route, { data: state.tasks })
         }
 
-        // GET /api/v1/organizations/:org/clients
-        if (pathname.match(/\/organizations\/[^/]+\/clients$/) && method === 'GET') {
-            return jsonResponse(route, { data: state.clients })
+        // /api/v1/organizations/:org/clients
+        if (pathname.match(/\/organizations\/[^/]+\/clients$/)) {
+            if (method === 'GET') {
+                return jsonResponse(route, { data: state.clients })
+            }
+            if (method === 'POST') {
+                const body = route.request().postDataJSON()
+                const newClient = createClient({ ...body })
+                state.clients.push(newClient)
+                return jsonResponse(route, { data: newClient }, 201)
+            }
+            return route.fallback()
         }
 
         // Unhandled API request — let it through (will likely fail with net error)
