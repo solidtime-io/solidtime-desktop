@@ -34,11 +34,11 @@
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
-        "@miniben90/x-win": "^3.3.0",
+        "@miniben90/x-win": "^3.4.0",
         "@sentry/electron": "^5.7.0",
         "@sentry/vite-plugin": "^2.22.8",
         "@solidtime/api": "^0.0.6",
-        "@solidtime/ui": "^0.0.17",
+        "@solidtime/ui": "^0.0.19",
         "better-sqlite3": "^11.7.0",
         "drizzle-orm": "^0.44.7",
         "electron-updater": "^6.6.2",
