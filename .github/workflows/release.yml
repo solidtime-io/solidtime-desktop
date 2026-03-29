@@ -16,7 +16,10 @@ jobs:
                 include:
                     - os: macos-latest
                       platform: mac
-                      arch: universal
+                      arch: arm64
+                    - os: macos-13
+                      platform: mac
+                      arch: x64
                     - os: ubuntu-latest
                       platform: linux
                       arch: x64
@@ -49,10 +52,6 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Install macOS x64 native module
-              if: matrix.platform == 'mac'
-              run: npm install --save-dev @miniben90/x-win-darwin-x64 --force
-
             - name: Build
               run: npm run build
 
@@ -73,7 +72,7 @@ jobs:
               if: matrix.platform == 'mac'
               run: |
                   echo "$API_KEY" > apple.p8
-                  npx electron-builder --mac --universal --publish always
+                  npx electron-builder --mac --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   CSC_LINK: ${{ secrets.MAC_CERTS }}
