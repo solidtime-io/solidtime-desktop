@@ -11,7 +11,6 @@ import { getCurrentActivityPeriod } from './idleMonitor'
 async function deleteAllActivityPeriods(): Promise<{ success: boolean; error?: string }> {
     try {
         await db.delete(activityPeriods)
-        console.log('All activity periods deleted successfully')
         return { success: true }
     } catch (error) {
         console.error('Failed to delete activity periods:', error)
@@ -33,7 +32,6 @@ async function deleteActivityPeriodsInRange(
         await db
             .delete(activityPeriods)
             .where(and(gte(activityPeriods.start, startDate), lte(activityPeriods.end, endDate)))
-        console.log(`Activity periods deleted for range ${startDate} - ${endDate}`)
         return { success: true }
     } catch (error) {
         console.error('Failed to delete activity periods in range:', error)
@@ -47,7 +45,7 @@ async function deleteActivityPeriodsInRange(
 // Type definitions for activity period responses
 interface WindowActivityInPeriod {
     appName: string
-    url: string | null
+    label: string | null
     count: number
 }
 
@@ -64,25 +62,23 @@ interface ActivityPeriodsResult {
     error?: string
 }
 
-const BUCKET_INTERVAL_MS = 10 * 60 * 1000 // 10 minutes in milliseconds
+const DEFAULT_BUCKET_INTERVAL_MS = 10 * 60 * 1000 // 10 minutes in milliseconds
 
 /**
- * Rounds a timestamp down to the nearest 10-minute boundary.
- * E.g., 10:03 → 10:00, 10:17 → 10:10
+ * Rounds a timestamp down to the nearest bucket boundary.
  */
-function floorToInterval(date: Date): Date {
+function floorToInterval(date: Date, intervalMs: number): Date {
     const ms = date.getTime()
-    return new Date(ms - (ms % BUCKET_INTERVAL_MS))
+    return new Date(ms - (ms % intervalMs))
 }
 
 /**
- * Rounds a timestamp up to the nearest 10-minute boundary.
- * E.g., 10:03 → 10:10, 10:20 → 10:20 (no change if already on boundary)
+ * Rounds a timestamp up to the nearest bucket boundary.
  */
-function ceilToInterval(date: Date): Date {
+function ceilToInterval(date: Date, intervalMs: number): Date {
     const ms = date.getTime()
-    const remainder = ms % BUCKET_INTERVAL_MS
-    return remainder === 0 ? new Date(ms) : new Date(ms + (BUCKET_INTERVAL_MS - remainder))
+    const remainder = ms % intervalMs
+    return remainder === 0 ? new Date(ms) : new Date(ms + (intervalMs - remainder))
 }
 
 interface RawWindowActivity {
@@ -137,14 +133,15 @@ interface RawPeriod {
 }
 
 /**
- * Transforms variable-length activity periods into clock-aligned 10-minute buckets.
+ * Transforms variable-length activity periods into clock-aligned buckets.
  * Each bucket's idle/active state is determined by majority overlap.
  * Window activities are aggregated per bucket with top 5 by duration.
  */
 function bucketizeActivityPeriods(
     rawPeriods: RawPeriod[],
     allWindowActivities: RawWindowActivity[],
-    now: Date
+    now: Date,
+    bucketIntervalMs: number
 ): ActivityPeriodResponse[] {
     if (rawPeriods.length === 0) {
         return []
@@ -166,14 +163,14 @@ function bucketizeActivityPeriods(
     }
 
     // Generate clock-aligned bucket boundaries
-    const bucketStart = floorToInterval(new Date(minTime)).getTime()
-    const bucketEnd = ceilToInterval(new Date(maxTime)).getTime()
+    const bucketStart = floorToInterval(new Date(minTime), bucketIntervalMs).getTime()
+    const bucketEnd = ceilToInterval(new Date(maxTime), bucketIntervalMs).getTime()
 
     const nowMs = now.getTime()
     const result: ActivityPeriodResponse[] = []
 
-    for (let bStart = bucketStart; bStart < bucketEnd; bStart += BUCKET_INTERVAL_MS) {
-        const bEnd = bStart + BUCKET_INTERVAL_MS
+    for (let bStart = bucketStart; bStart < bucketEnd; bStart += bucketIntervalMs) {
+        const bEnd = bStart + bucketIntervalMs
 
         // Calculate overlap with each period
         let activeMs = 0
@@ -279,7 +276,7 @@ function aggregateWindowActivitiesFromList(
         .slice(0, 5)
         .map((a) => ({
             appName: a.appName,
-            url: a.label,
+            label: a.label,
             count: a.totalDuration,
         }))
 }
@@ -309,7 +306,8 @@ function isValidISODate(dateString: unknown): dateString is string {
  */
 async function getActivityPeriods(
     startDate: unknown,
-    endDate: unknown
+    endDate: unknown,
+    bucketIntervalMinutes?: number
 ): Promise<ActivityPeriodsResult> {
     try {
         // Validate input types and formats
@@ -374,14 +372,21 @@ async function getActivityPeriods(
         // Fetch all window activities in the date range in a single query
         const allWindowActivities = await fetchAllWindowActivitiesInRange(startDate, endDate)
 
-        // Transform into clock-aligned 10-minute buckets
+        // Transform into clock-aligned buckets matching the calendar grid interval
+        const intervalMs = (bucketIntervalMinutes && bucketIntervalMinutes > 0)
+            ? bucketIntervalMinutes * 60 * 1000
+            : DEFAULT_BUCKET_INTERVAL_MS
         const bucketedPeriods = bucketizeActivityPeriods(
             rawPeriods,
             allWindowActivities,
-            new Date()
+            new Date(),
+            intervalMs
         )
 
-        return { success: true, data: bucketedPeriods }
+        // Serialize as JSON string to avoid Electron's slow structured clone on nested objects
+        const jsonString = JSON.stringify(bucketedPeriods)
+
+        return { success: true, data: jsonString }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
         console.error('Failed to fetch activity periods:', errorMessage, error)
@@ -400,8 +405,8 @@ export function registerActivityPeriodListeners(): void {
     // IPC handler to fetch activity periods for a date range
     ipcMain.handle(
         'getActivityPeriods',
-        async (_event, startDate: unknown, endDate: unknown): Promise<ActivityPeriodsResult> => {
-            return getActivityPeriods(startDate, endDate)
+        async (_event, startDate: unknown, endDate: unknown, bucketIntervalMinutes?: number): Promise<ActivityPeriodsResult> => {
+            return getActivityPeriods(startDate, endDate, bucketIntervalMinutes)
         }
     )
 
