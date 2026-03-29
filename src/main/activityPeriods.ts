@@ -58,7 +58,7 @@ interface ActivityPeriodResponse {
 
 interface ActivityPeriodsResult {
     success: boolean
-    data?: ActivityPeriodResponse[]
+    data?: ActivityPeriodResponse[] | string
     error?: string
 }
 
@@ -373,9 +373,10 @@ async function getActivityPeriods(
         const allWindowActivities = await fetchAllWindowActivitiesInRange(startDate, endDate)
 
         // Transform into clock-aligned buckets matching the calendar grid interval
-        const intervalMs = (bucketIntervalMinutes && bucketIntervalMinutes > 0)
-            ? bucketIntervalMinutes * 60 * 1000
-            : DEFAULT_BUCKET_INTERVAL_MS
+        const intervalMs =
+            bucketIntervalMinutes && bucketIntervalMinutes > 0
+                ? bucketIntervalMinutes * 60 * 1000
+                : DEFAULT_BUCKET_INTERVAL_MS
         const bucketedPeriods = bucketizeActivityPeriods(
             rawPeriods,
             allWindowActivities,
@@ -405,7 +406,12 @@ export function registerActivityPeriodListeners(): void {
     // IPC handler to fetch activity periods for a date range
     ipcMain.handle(
         'getActivityPeriods',
-        async (_event, startDate: unknown, endDate: unknown, bucketIntervalMinutes?: number): Promise<ActivityPeriodsResult> => {
+        async (
+            _event,
+            startDate: unknown,
+            endDate: unknown,
+            bucketIntervalMinutes?: number
+        ): Promise<ActivityPeriodsResult> => {
             return getActivityPeriods(startDate, endDate, bucketIntervalMinutes)
         }
     )
