@@ -26,7 +26,9 @@ export function useAppIcons(appNames: Ref<string[]>) {
 
             isLoading.value = true
             try {
-                const newIcons = await window.electronAPI.getAppIcons(newAppNames)
+                console.time(`[calendar] getIcons (${newAppNames.length} new)`)
+                const newIcons = await window.electronAPI.getIcons(newAppNames)
+                console.timeEnd(`[calendar] getIcons (${newAppNames.length} new)`)
                 icons.value = { ...icons.value, ...newIcons }
             } catch (error) {
                 console.error('Failed to fetch app icons:', error)
