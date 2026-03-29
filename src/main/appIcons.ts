@@ -1,4 +1,4 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, net } from 'electron'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 
@@ -230,6 +230,88 @@ async function getAppIcons(appNames: string[]): Promise<Record<string, string | 
 }
 
 /**
+ * Check if a string looks like a domain name
+ */
+function isDomain(name: string): boolean {
+    return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(name)
+}
+
+/**
+ * Fetch favicon directly from a domain's /favicon.ico
+ */
+async function fetchFavicon(domain: string): Promise<string | null> {
+    try {
+        const url = `https://${domain}/favicon.ico`
+        const response = await net.fetch(url, {
+            headers: {
+                Accept: 'image/x-icon,image/png,image/*',
+            },
+        })
+        if (!response.ok) return null
+
+        const buffer = Buffer.from(await response.arrayBuffer())
+        if (buffer.length === 0) return null
+
+        const contentType = response.headers.get('content-type') || 'image/x-icon'
+        const base64 = buffer.toString('base64')
+        return `data:${contentType};base64,${base64}`
+    } catch (error) {
+        console.error(`Failed to fetch favicon for ${domain}:`, error)
+        return null
+    }
+}
+
+/**
+ * Get favicon for a domain (from cache or fetch)
+ */
+async function getFavicon(domain: string): Promise<string | null> {
+    const safeName = domain.replace(/[^a-z0-9.]/gi, '_').toLowerCase()
+    const cachePath = path.join(ICON_CACHE_DIR, `favicon_${safeName}.txt`)
+
+    // Check cache
+    try {
+        const stats = await fs.stat(cachePath)
+        const ageInDays = (Date.now() - stats.mtimeMs) / (1000 * 60 * 60 * 24)
+        if (ageInDays <= ICON_CACHE_EXPIRY_DAYS) {
+            return await fs.readFile(cachePath, 'utf-8')
+        }
+        await fs.unlink(cachePath).catch(() => {})
+    } catch {
+        // Not cached
+    }
+
+    const iconData = await fetchFavicon(domain)
+    if (iconData) {
+        try {
+            await fs.writeFile(cachePath, iconData, 'utf-8')
+        } catch (error) {
+            console.error(`Failed to cache favicon for ${domain}:`, error)
+        }
+    }
+    return iconData
+}
+
+/**
+ * Get icons for a mixed list of app names and domains.
+ * Domains get favicons, app names get native app icons.
+ */
+async function getIcons(names: string[]): Promise<Record<string, string | null>> {
+    const domains = names.filter(isDomain)
+    const appNames = names.filter((n) => !isDomain(n))
+
+    const [faviconResults, appIconResults] = await Promise.all([
+        Promise.all(domains.map(async (domain) => [domain, await getFavicon(domain)] as const)),
+        appNames.length > 0 ? getAppIcons(appNames) : Promise.resolve({}),
+    ])
+
+    const icons: Record<string, string | null> = { ...appIconResults }
+    for (const [domain, icon] of faviconResults) {
+        icons[domain] = icon
+    }
+    return icons
+}
+
+/**
  * Clear icon cache
  */
 async function clearIconCache(): Promise<void> {
@@ -270,6 +352,19 @@ export function registerAppIconHandlers(): void {
             }
         }
         return await getAppIcons(appNames)
+    })
+
+    // Get icons for mixed app names and domains
+    ipcMain.handle('getIcons', async (_event, names: string[]) => {
+        if (!Array.isArray(names) || names.length > 100) {
+            throw new Error('Invalid names array')
+        }
+        for (const name of names) {
+            if (typeof name !== 'string' || name.length === 0 || name.length > 255) {
+                throw new Error('Invalid name in array')
+            }
+        }
+        return await getIcons(names)
     })
 
     // Clear icon cache

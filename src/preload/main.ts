@@ -45,6 +45,7 @@ if (process.contextIsolated || true) {
                 ipcRenderer.invoke('getWindowActivityStats', startDate, endDate),
             getAppIcon: (appName: string) => ipcRenderer.invoke('getAppIcon', appName),
             getAppIcons: (appNames: string[]) => ipcRenderer.invoke('getAppIcons', appNames),
+            getIcons: (names: string[]) => ipcRenderer.invoke('getIcons', names),
             clearIconCache: () => ipcRenderer.invoke('clearIconCache'),
             onIdleDialogResponse: (callback) => {
                 const listener = (_event, value) => callback(value)
