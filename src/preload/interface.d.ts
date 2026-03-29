@@ -55,7 +55,7 @@ export interface IElectronAPI {
     getWindowActivities: (startDate: string, endDate: string) => Promise<WindowActivity[]>
     getWindowActivityStats: (startDate: string, endDate: string) => Promise<WindowActivityStats[]>
     getAppIcon: (appName: string) => Promise<string | null>
-    getAppIcons: (appNames: string[]) => Promise<Record<string, string | null>>
+    getIcons: (names: string[]) => Promise<Record<string, string | null>>
     clearIconCache: () => Promise<{ success: boolean }>
     checkScreenRecordingPermission: () => Promise<boolean>
     requestScreenRecordingPermission: () => Promise<boolean>
