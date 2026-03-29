@@ -236,11 +236,15 @@ const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
             // Read the calendar grid interval to align activity buckets
             let slotMinutes = 15
             try {
-                const settings = JSON.parse(localStorage.getItem('solidtime:calendar-settings') || '{}')
+                const settings = JSON.parse(
+                    localStorage.getItem('solidtime:calendar-settings') || '{}'
+                )
                 if (settings.slotMinutes && settings.slotMinutes > 0) {
                     slotMinutes = settings.slotMinutes
                 }
-            } catch { /* use default */ }
+            } catch {
+                /* use default */
+            }
 
             // Call the IPC handler to get activity periods from the database
             const result = await window.electron.ipcRenderer.invoke(
@@ -253,9 +257,7 @@ const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
             // Handle the new response format with success/data/error
             // Data is sent as JSON string to avoid Electron's slow structured clone
             if (result && result.success && result.data) {
-                return typeof result.data === 'string'
-                    ? JSON.parse(result.data)
-                    : result.data
+                return typeof result.data === 'string' ? JSON.parse(result.data) : result.data
             }
 
             if (result && result.error) {
