@@ -339,21 +339,6 @@ export function registerAppIconHandlers(): void {
         return await getAppIcon(appName)
     })
 
-    // Get multiple app icons
-    ipcMain.handle('getAppIcons', async (_event, appNames: string[]) => {
-        // Validate input array
-        if (!Array.isArray(appNames) || appNames.length > 100) {
-            throw new Error('Invalid app names array')
-        }
-        // Validate each app name
-        for (const name of appNames) {
-            if (typeof name !== 'string' || name.length === 0 || name.length > 255) {
-                throw new Error('Invalid app name in array')
-            }
-        }
-        return await getAppIcons(appNames)
-    })
-
     // Get icons for mixed app names and domains
     ipcMain.handle('getIcons', async (_event, names: string[]) => {
         if (!Array.isArray(names) || names.length > 100) {

@@ -212,13 +212,13 @@ function onRefresh() {
     })
 }
 
-// Fetch activity periods from the database
+// Fetch activity periods from the database (using actual view range, not expanded)
 const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
     queryKey: computed(() => [
         'activityPeriods',
         {
-            start: expandedDateRange.value.start,
-            end: expandedDateRange.value.end,
+            start: calendarStart.value?.toISOString(),
+            end: calendarEnd.value?.toISOString(),
         },
     ]),
     staleTime: 0,
@@ -226,20 +226,36 @@ const { data: activityPeriodsData } = useQuery<ActivityPeriod[]>({
     placeholderData: (previousData) => previousData,
     queryFn: async () => {
         try {
-            if (!expandedDateRange.value.start || !expandedDateRange.value.end) {
+            if (!calendarStart.value || !calendarEnd.value) {
                 return []
             }
+
+            const start = dayjs(calendarStart.value).utc().format()
+            const end = dayjs(calendarEnd.value).utc().format()
+
+            // Read the calendar grid interval to align activity buckets
+            let slotMinutes = 15
+            try {
+                const settings = JSON.parse(localStorage.getItem('solidtime:calendar-settings') || '{}')
+                if (settings.slotMinutes && settings.slotMinutes > 0) {
+                    slotMinutes = settings.slotMinutes
+                }
+            } catch { /* use default */ }
 
             // Call the IPC handler to get activity periods from the database
             const result = await window.electron.ipcRenderer.invoke(
                 'getActivityPeriods',
-                expandedDateRange.value.start,
-                expandedDateRange.value.end
+                start,
+                end,
+                slotMinutes
             )
 
             // Handle the new response format with success/data/error
+            // Data is sent as JSON string to avoid Electron's slow structured clone
             if (result && result.success && result.data) {
-                return result.data
+                return typeof result.data === 'string'
+                    ? JSON.parse(result.data)
+                    : result.data
             }
 
             if (result && result.error) {
