@@ -47,8 +47,8 @@ jobs:
                     echo "ep_pre_release=false" >> $GITHUB_OUTPUT
                   fi
 
-            - name: Install snapcraft (Linux)
-              if: matrix.platform == 'linux'
+            - name: Install snapcraft (Linux x64)
+              if: matrix.platform == 'linux' && matrix.arch == 'x64'
               run: sudo snap install snapcraft --classic
 
             - name: Install system FPM (Linux ARM64)
@@ -62,6 +62,9 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
+
+            - name: Set version from tag
+              run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
 
             - name: Install dependencies
               run: npm install
@@ -78,7 +81,7 @@ jobs:
 
             - name: Run Electron Builder (Linux)
               if: matrix.platform == 'linux'
-              run: npx electron-builder --linux --${{ matrix.arch }} --publish always
+              run: npx electron-builder --linux ${{ matrix.arch == 'arm64' && 'AppImage' || '' }} --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   USE_SYSTEM_FPM: ${{ matrix.arch == 'arm64' && 'true' || 'false' }}
