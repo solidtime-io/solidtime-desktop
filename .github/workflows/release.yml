@@ -73,7 +73,7 @@ jobs:
 
             - name: Run Electron Builder (Linux ARM64)
               if: matrix.platform == 'linux' && matrix.arch == 'arm64'
-              run: npx electron-builder --linux AppImage --arm64 --publish always
+              run: npx electron-builder --linux deb tar.gz rpm --arm64 --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   USE_SYSTEM_FPM: 'true'
