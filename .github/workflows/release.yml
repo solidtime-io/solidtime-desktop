@@ -63,7 +63,7 @@ jobs:
 
             - name: Run Electron Builder (Linux)
               if: matrix.platform == 'linux'
-              run: npx electron-builder --linux --${{ matrix.arch }} --publish always
+              run: npx electron-builder --linux ${{ matrix.arch == 'arm64' && 'AppImage' || 'AppImage snap' }} --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   USE_SYSTEM_FPM: ${{ matrix.arch == 'arm64' && 'true' || 'false' }}
