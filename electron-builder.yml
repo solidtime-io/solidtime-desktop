@@ -58,7 +58,7 @@ linux:
         entry:
             Name: solidtime
             MimeType: x-scheme-handler/solidtime
-    maintainer: solidtime.io
+    maintainer: solidtime <hello@solidtime.io>
     category: Utility
     mimeTypes:
         - x-scheme-handler/solidtime

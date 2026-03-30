@@ -3,7 +3,11 @@
     "version": "0.0.70-beta",
     "description": "Desktop App for solidtime - the modern open-source time tracker",
     "main": "./out/main/index.js",
-    "author": "solidtime.io",
+    "author": {
+        "name": "solidtime",
+        "email": "hello@solidtime.io",
+        "url": "https://solidtime.io"
+    },
     "homepage": "https://solidtime.io",
     "type": "module",
     "scripts": {
@@ -25,6 +29,7 @@
         "test:e2e": "npx playwright test --config=e2e/playwright.config.ts"
     },
     "build": {
+        "extends": "./electron-builder.yml",
         "generateUpdatesFilesForAllChannels": true,
         "afterSign": "electron-builder-notarize",
         "mac": {
