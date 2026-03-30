@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
 
 /**
  * Validates that a string is a proper UTC ISO 8601 timestamp
@@ -27,15 +27,19 @@ export function isValidUTCTimestamp(timestamp: string): boolean {
     )
 }
 
-export const activityPeriods = sqliteTable('activity_periods', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    start: text('start').notNull(), // ISO 8601 UTC timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)
-    end: text('end').notNull(), // ISO 8601 UTC timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)
-    isIdle: integer('is_idle', { mode: 'boolean' }).notNull(), // true for idle, false for active
-    createdAt: text('created_at')
-        .notNull()
-        .$defaultFn(() => new Date().toISOString()),
-})
+export const activityPeriods = sqliteTable(
+    'activity_periods',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        start: text('start').notNull(), // ISO 8601 UTC timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)
+        end: text('end').notNull(), // ISO 8601 UTC timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)
+        isIdle: integer('is_idle', { mode: 'boolean' }).notNull(), // true for idle, false for active
+        createdAt: text('created_at')
+            .notNull()
+            .$defaultFn(() => new Date().toISOString()),
+    },
+    (table) => [index('idx_activity_periods_start_end').on(table.start, table.end)]
+)
 
 export type ActivityPeriod = typeof activityPeriods.$inferSelect
 export type NewActivityPeriod = typeof activityPeriods.$inferInsert
@@ -82,18 +86,22 @@ export type NewSetting = typeof settings.$inferInsert
 /**
  * Window activities table for tracking active application windows
  */
-export const windowActivities = sqliteTable('window_activities', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    timestamp: text('timestamp').notNull(), // ISO 8601 UTC timestamp (start time of activity)
-    durationSeconds: integer('duration_seconds').notNull(), // Duration in seconds
-    appName: text('app_name').notNull(), // Application name (e.g., "Google Chrome", "Visual Studio Code")
-    windowTitle: text('window_title').notNull(), // Window title
-    url: text('url'), // URL if available (for browsers)
-    processId: integer('process_id'), // Process ID
-    createdAt: text('created_at')
-        .notNull()
-        .$defaultFn(() => new Date().toISOString()),
-})
+export const windowActivities = sqliteTable(
+    'window_activities',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        timestamp: text('timestamp').notNull(), // ISO 8601 UTC timestamp (start time of activity)
+        durationSeconds: integer('duration_seconds').notNull(), // Duration in seconds
+        appName: text('app_name').notNull(), // Application name (e.g., "Google Chrome", "Visual Studio Code")
+        windowTitle: text('window_title').notNull(), // Window title
+        url: text('url'), // URL if available (for browsers)
+        processId: integer('process_id'), // Process ID
+        createdAt: text('created_at')
+            .notNull()
+            .$defaultFn(() => new Date().toISOString()),
+    },
+    (table) => [index('idx_window_activities_timestamp').on(table.timestamp)]
+)
 
 export type WindowActivity = typeof windowActivities.$inferSelect
 export type NewWindowActivity = typeof windowActivities.$inferInsert
