@@ -61,7 +61,7 @@ jobs:
 
             - name: Run Electron Builder (Windows)
               if: matrix.platform == 'windows'
-              run: npx electron-builder --windows --${{ matrix.arch }} --publish always
+              run: npx electron-builder --windows --${{ matrix.arch }} --publish never
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -82,7 +82,7 @@ jobs:
               if: matrix.platform == 'mac'
               run: |
                   echo "$API_KEY" > apple.p8
-                  npx electron-builder --mac --${{ matrix.arch }} --publish always
+                  npx electron-builder --mac --${{ matrix.arch }} --publish never
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   CSC_LINK: ${{ secrets.MAC_CERTS }}
@@ -91,3 +91,88 @@ jobs:
                   APPLE_API_KEY: apple.p8
                   APPLE_API_KEY_ID: ${{ secrets.API_KEY_ID }}
                   APPLE_API_ISSUER: ${{ secrets.API_KEY_ISSUER_ID }}
+
+            - name: Upload release artifacts
+              if: matrix.platform == 'mac' || matrix.platform == 'windows'
+              uses: actions/upload-artifact@v4
+              with:
+                  name: release-${{ matrix.platform }}-${{ matrix.arch }}
+                  path: |
+                      dist/*.dmg
+                      dist/*-mac.zip
+                      dist/*.exe
+                      dist/*.blockmap
+                      dist/latest-*.yml
+                      dist/latest-mac.yml
+                      dist/latest.yml
+                  if-no-files-found: ignore
+
+    merge-update-ymls:
+        needs: release
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out Git repository
+              uses: actions/checkout@v3
+
+            - name: Install Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+
+            - name: Install yaml package
+              run: npm install --no-save --ignore-scripts yaml
+
+            - name: Download all release artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: release-artifacts
+                  pattern: release-*
+
+            - name: List downloaded artifacts
+              run: find release-artifacts -type f | sort
+
+            - name: Merge macOS update yml files
+              run: |
+                  MAC_YMLS=$(find release-artifacts -name 'latest-*-mac.yml' | sort)
+                  MAC_COUNT=$(echo "$MAC_YMLS" | wc -l)
+                  if [ "$MAC_COUNT" -ge 2 ]; then
+                    echo "Merging $MAC_COUNT latest-mac.yml files"
+                    node scripts/merge-update-ymls.js merged-latest-mac.yml $MAC_YMLS
+                  else
+                    echo "Only one latest-mac.yml found, copying as-is"
+                    cp $(echo "$MAC_YMLS" | head -1) merged-latest-mac.yml
+                  fi
+
+            - name: Merge Windows update yml files
+              run: |
+                  WIN_YMLS=$(find release-artifacts -name 'latest-*.yml' ! -name 'latest-*-mac.yml' | sort)
+                  WIN_COUNT=$(echo "$WIN_YMLS" | wc -l)
+                  if [ "$WIN_COUNT" -ge 2 ]; then
+                    echo "Merging $WIN_COUNT latest.yml files"
+                    node scripts/merge-update-ymls.js merged-latest.yml $WIN_YMLS
+                  else
+                    echo "Only one latest.yml found, copying as-is"
+                    cp $(echo "$WIN_YMLS" | head -1) merged-latest.yml
+                  fi
+
+            - name: Get release tag
+              id: tag
+              run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+            - name: Upload merged yml files to release
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              run: |
+                  TAG="${{ steps.tag.outputs.tag }}"
+                  find release-artifacts -type f \( -name '*.dmg' -o -name '*-mac.zip' -o -name '*.exe' -o -name '*.blockmap' \) -print0 | \
+                    xargs -0 -r gh release upload "$TAG" --clobber
+                  find release-artifacts -type f \( -name 'latest-*-mac.yml' -o -name 'latest-*.yml' \) -print0 | \
+                    xargs -0 -r gh release upload "$TAG" --clobber
+                  for FILE in merged-latest-mac.yml merged-latest.yml; do
+                    if [ -f "$FILE" ]; then
+                      ASSET_NAME="${FILE#merged-}"
+                      mv "$FILE" "$ASSET_NAME"
+                      echo "Uploading $ASSET_NAME to release $TAG"
+                      gh release upload "$TAG" "$ASSET_NAME" --clobber
+                    fi
+                  done

@@ -25,6 +25,9 @@ protocols:
     schemes:
         - solidtime
 win:
+    publish:
+        - provider: github
+          channel: latest-${arch}
     executableName: solidtime
     target:
         - nsis
@@ -35,6 +38,9 @@ nsis:
     uninstallDisplayName: ${productName}
     createDesktopShortcut: always
 mac:
+    publish:
+        - provider: github
+          channel: latest-${arch}
     entitlementsInherit: build/entitlements.mac.plist
     target: default
     extendInfo:
