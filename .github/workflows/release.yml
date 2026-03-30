@@ -37,6 +37,20 @@ jobs:
             - name: Check out Git repository
               uses: actions/checkout@v3
 
+            - name: Determine release type
+              id: release-type
+              shell: bash
+              run: |
+                  if [[ "${{ github.ref_name }}" == *"-"* ]]; then
+                    echo "ep_pre_release=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "ep_pre_release=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Install snapcraft (Linux)
+              if: matrix.platform == 'linux'
+              run: sudo snap install snapcraft --classic
+
             - name: Install system FPM (Linux ARM64)
               if: matrix.platform == 'linux' && matrix.arch == 'arm64'
               run: |
@@ -60,13 +74,15 @@ jobs:
               run: npx electron-builder --windows --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+                  EP_PRE_RELEASE: ${{ steps.release-type.outputs.ep_pre_release }}
 
             - name: Run Electron Builder (Linux)
               if: matrix.platform == 'linux'
-              run: npx electron-builder --linux ${{ matrix.arch == 'arm64' && 'AppImage' || 'AppImage snap' }} --${{ matrix.arch }} --publish always
+              run: npx electron-builder --linux --${{ matrix.arch }} --publish always
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   USE_SYSTEM_FPM: ${{ matrix.arch == 'arm64' && 'true' || 'false' }}
+                  EP_PRE_RELEASE: ${{ steps.release-type.outputs.ep_pre_release }}
 
             - name: Run Electron Builder (macOS)
               if: matrix.platform == 'mac'
@@ -81,3 +97,4 @@ jobs:
                   APPLE_API_KEY: apple.p8
                   APPLE_API_KEY_ID: ${{ secrets.API_KEY_ID }}
                   APPLE_API_ISSUER: ${{ secrets.API_KEY_ISSUER_ID }}
+                  EP_PRE_RELEASE: ${{ steps.release-type.outputs.ep_pre_release }}
