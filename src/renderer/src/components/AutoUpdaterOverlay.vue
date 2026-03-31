@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { PrimaryButton, SecondaryButton } from '@solidtime/ui'
+import { LoadingSpinner, PrimaryButton, SecondaryButton } from '@solidtime/ui'
 
 const showUpdateDownloadedOverlay = ref(false)
+const installingUpdate = ref(false)
 
 onMounted(() => {
     window.electronAPI.onUpdateDownloaded(() => {
         showUpdateDownloadedOverlay.value = true
+        installingUpdate.value = false
     })
     window.electronAPI.updateAutoUpdater()
 })
 
 function installUpdate() {
+    installingUpdate.value = true
     window.electronAPI.installUpdate()
 }
 </script>
@@ -25,10 +28,19 @@ function installUpdate() {
             <p class="py-1 text-muted-foreground max-w-xs text-center">
                 A new update has been downloaded and is ready to install.
             </p>
-            <SecondaryButton class="mr-4" @click="showUpdateDownloadedOverlay = false"
+            <SecondaryButton
+                class="mr-4"
+                :disabled="installingUpdate"
+                @click="showUpdateDownloadedOverlay = false"
                 >Update Later</SecondaryButton
             >
-            <PrimaryButton class="mt-4" @click="installUpdate">Restart & Update</PrimaryButton>
+            <PrimaryButton class="mt-4" :disabled="installingUpdate" @click="installUpdate">
+                <span v-if="installingUpdate" class="inline-flex items-center gap-2">
+                    <LoadingSpinner />
+                    Applying update...
+                </span>
+                <span v-else>Restart & Update</span>
+            </PrimaryButton>
         </div>
     </div>
 </template>
