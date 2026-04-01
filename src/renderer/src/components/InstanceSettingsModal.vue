@@ -40,7 +40,7 @@ function submit() {
 <template>
     <Modal :show="show" :maxWidth="maxWidth" :closeable="closeable" @close="close">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white" role="heading">Settings</div>
+            <div class="text-lg font-medium text-text-primary" role="heading">Settings</div>
 
             <div class="mt-4 text-sm text-muted-foreground flex flex-col justify-center">
                 <InputLabel for="instanceEndpoint" value="Solidtime Instance Endpoint" />
