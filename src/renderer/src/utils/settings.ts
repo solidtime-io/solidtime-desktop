@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 export interface AppSettings {
     widgetActivated: boolean
     trayTimerActivated: boolean
+    trayTemplate: string
     idleDetectionEnabled: boolean
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
@@ -11,6 +12,7 @@ export interface AppSettings {
 // Reactive settings that sync with the database
 export const isWidgetActivated = ref(true)
 export const isTrayTimerActivated = ref(true)
+export const trayTemplate = ref('{hours}:{minutes}:{seconds} – {project_colored}')
 export const idleDetectionEnabled = ref(true)
 export const idleThresholdMinutes = ref(5)
 export const activityTrackingEnabled = ref(false) // Off by default
@@ -28,6 +30,7 @@ export async function initializeSettings() {
         if (result.success && result.data) {
             isWidgetActivated.value = result.data.widgetActivated
             isTrayTimerActivated.value = result.data.trayTimerActivated
+            trayTemplate.value = result.data.trayTemplate
             idleDetectionEnabled.value = result.data.idleDetectionEnabled
             idleThresholdMinutes.value = result.data.idleThresholdMinutes
             activityTrackingEnabled.value = result.data.activityTrackingEnabled
@@ -42,6 +45,11 @@ export async function initializeSettings() {
 
         watch(isTrayTimerActivated, (value) => {
             updateSetting({ trayTimerActivated: value })
+        })
+
+        watch(trayTemplate, (value) => {
+            updateSetting({ trayTemplate: value })
+            window.electronAPI.updateTrayTemplate(value)
         })
 
         watch(idleDetectionEnabled, (value) => {

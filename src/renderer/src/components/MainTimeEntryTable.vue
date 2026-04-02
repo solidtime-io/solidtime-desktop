@@ -184,14 +184,27 @@ async function createTag(newTagName: string): Promise<Tag | undefined> {
     return undefined
 }
 
-// Watch for current time entry changes and update tray state
-watch(currentTimeEntry, () => {
-    updateTrayState({ ...currentTimeEntry.value })
-})
+// Send current time entry + project + task info to the tray
+function sendTrayUpdate() {
+    const project = projects.value?.find(
+        (p) => p.id === currentTimeEntry.value.project_id
+    )
+    const task = tasks.value?.find(
+        (t) => t.id === currentTimeEntry.value.task_id
+    )
+    updateTrayState({
+        ...currentTimeEntry.value,
+        project: project?.name ?? '',
+        projectColor: project?.color ?? '',
+        task: task?.name ?? '',
+    })
+}
 
-watch(isTrayTimerActivated, () => {
-    updateTrayState({ ...currentTimeEntry.value })
-})
+// Watch for current time entry, projects, tasks, and tray setting changes
+watch(currentTimeEntry, sendTrayUpdate)
+watch(isTrayTimerActivated, sendTrayUpdate)
+watch(projects, sendTrayUpdate)
+watch(tasks, sendTrayUpdate)
 
 // Watch for active state changes and manage live timer
 watchEffect(() => {

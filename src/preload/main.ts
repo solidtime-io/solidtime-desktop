@@ -31,6 +31,8 @@ if (process.contextIsolated || true) {
                 ipcRenderer.on('updateError', (_event, value) => callback(value)),
             updateTrayState: (timeEntry: string, showTimer: boolean) =>
                 ipcRenderer.send('updateTrayState', timeEntry, showTimer),
+            updateTrayTemplate: (template: string) =>
+                ipcRenderer.send('updateTrayTemplate', template),
             updateAutoUpdater: () => ipcRenderer.send('updateAutoUpdater'),
             updateIdleThreshold: (thresholdMinutes: number) =>
                 ipcRenderer.send('updateIdleThreshold', thresholdMinutes),
