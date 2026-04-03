@@ -11,7 +11,8 @@ Download the latest versions:
 
 -   mac OS (Silicon): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-arm64.dmg)
 -   mac OS (Intel): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-x64.dmg)
--   Windows: [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-setup.exe)
+-   Windows (ARM): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-setup-arm64.exe)
+-   Windows (x64): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-setup-x64.exe)
 -   Linux (deb, ARM): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-arm64.deb)
 -   Linux (deb, x86): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-amd64.deb)
 -   Linux (RPM, ARM): [Download](https://github.com/solidtime-io/solidtime-desktop/releases/latest/download/solidtime-aarch64.rpm)
