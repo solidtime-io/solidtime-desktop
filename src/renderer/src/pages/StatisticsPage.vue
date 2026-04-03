@@ -285,7 +285,7 @@ const totalTime = computed(() => {
                         <div class="text-center text-text-tertiary">
                             <p class="text-lg">No activity data available</p>
                             <p class="text-sm mt-2">
-                                Start tracking your window activity to see statistics
+                              Check back in a few minutes
                             </p>
                         </div>
                     </div>
