@@ -293,6 +293,35 @@ async function saveCurrentActivityIfNeeded(): Promise<void> {
 }
 
 /**
+ * Returns the current in-progress window activity (not yet saved to DB)
+ */
+export function getCurrentActivity(): {
+    appName: string
+    windowTitle: string
+    url: string | null
+    timestamp: string
+    durationSeconds: number
+} | null {
+    if (!lastWindowInfo || !currentActivityStartTime || !activityTrackingEnabled) {
+        return null
+    }
+
+    const appName = lastWindowInfo.info.name || lastWindowInfo.info.execName || 'Unknown'
+    if (appName === 'Unknown') return null
+
+    const durationSeconds = Math.floor((Date.now() - currentActivityStartTime.getTime()) / 1000)
+    if (durationSeconds <= 0) return null
+
+    return {
+        appName,
+        windowTitle: lastWindowInfo.title || 'Untitled',
+        url: sanitizeUrl(lastWindowInfo.url),
+        timestamp: currentActivityStartTime.toISOString(),
+        durationSeconds,
+    }
+}
+
+/**
  * Stops tracking window activity
  */
 export async function stopActivityTracking(): Promise<void> {

@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { windowActivities } from './db/schema'
 import { and, gte, lte, sql, ne } from 'drizzle-orm'
-import { resetActivityStartTime } from './activityTracker'
+import { resetActivityStartTime, getCurrentActivity } from './activityTracker'
 
 /**
  * Deletes all window activities from the database
@@ -98,6 +98,27 @@ export function registerWindowActivitiesHandlers() {
                     windowActivities.windowTitle
                 )
                 .orderBy(sql`SUM(${windowActivities.durationSeconds}) DESC`)
+
+            // Include the current in-progress activity if it falls within the date range
+            const current = getCurrentActivity()
+            if (current && current.timestamp >= startDate && current.timestamp <= endDate) {
+                const existing = stats.find(
+                    (s) =>
+                        s.appName === current.appName &&
+                        s.url === current.url &&
+                        s.windowTitle === current.windowTitle
+                )
+                if (existing) {
+                    existing.count += current.durationSeconds
+                } else {
+                    stats.push({
+                        appName: current.appName,
+                        url: current.url,
+                        windowTitle: current.windowTitle,
+                        count: current.durationSeconds,
+                    })
+                }
+            }
 
             return stats
         } catch (error) {
