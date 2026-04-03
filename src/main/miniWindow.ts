@@ -21,6 +21,9 @@ export function initializeMiniWindow(icon: string) {
     miniWindow.setAutoHideMenuBar(true)
     miniWindow.on('ready-to-show', () => {
         miniWindow.setAlwaysOnTop(true, 'floating')
+        if (process.platform === 'win32') {
+            miniWindow.setShape([{ x: 0, y: 0, width: 420, height: 32 }])
+        }
     })
 
     return miniWindow
