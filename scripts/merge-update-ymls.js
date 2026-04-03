@@ -47,7 +47,20 @@ for (const doc of docs) {
         allFiles.push(...doc.files)
     }
 }
-merged.files = Array.from(new Map(allFiles.map((file) => [file.url ?? file.path, file])).values())
+let deduped = Array.from(
+    new Map(allFiles.map((file) => [file.url ?? file.path, file])).values()
+)
+
+// Sort preferred architecture first in the files array.
+// electron-updater's findFile() picks the first .exe/.zip match, so order matters.
+if (preferArch) {
+    deduped.sort((a, b) => {
+        const aMatch = a.url?.includes(preferArch) ? 0 : 1
+        const bMatch = b.url?.includes(preferArch) ? 0 : 1
+        return aMatch - bMatch
+    })
+}
+merged.files = deduped
 
 // Merge Windows package metadata by architecture.
 const allPackages = {}
@@ -66,26 +79,9 @@ if (dates.length > 0) {
     merged.releaseDate = dates.sort((a, b) => b.getTime() - a.getTime())[0].toISOString()
 }
 
-// Keep deprecated top-level path/sha512 aligned with a sensible primary file
-// for older updaters/tools that still read them. When --prefer-arch is set,
-// try to pick that architecture first so older clients download the right binary.
-const preferredFile = (() => {
-    if (preferArch) {
-        const archMatch =
-            merged.files.find(
-                (file) => file.url?.includes(preferArch) && file.url?.endsWith('.zip')
-            ) ??
-            merged.files.find(
-                (file) => file.url?.includes(preferArch) && file.url?.endsWith('.exe')
-            )
-        if (archMatch) return archMatch
-    }
-    return (
-        merged.files.find((file) => file.url?.endsWith('.zip')) ??
-        merged.files.find((file) => file.url?.endsWith('.exe')) ??
-        merged.files[0]
-    )
-})()
+// Keep deprecated top-level path/sha512 aligned with the first file
+// (which is the preferred arch after sorting above).
+const preferredFile = merged.files[0]
 
 if (preferredFile?.url) {
     merged.path = preferredFile.url
