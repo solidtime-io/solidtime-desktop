@@ -47,9 +47,7 @@ for (const doc of docs) {
         allFiles.push(...doc.files)
     }
 }
-let deduped = Array.from(
-    new Map(allFiles.map((file) => [file.url ?? file.path, file])).values()
-)
+let deduped = Array.from(new Map(allFiles.map((file) => [file.url ?? file.path, file])).values())
 
 // Sort preferred architecture first in the files array.
 // electron-updater's findFile() picks the first .exe/.zip match, so order matters.

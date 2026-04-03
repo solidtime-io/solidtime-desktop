@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { windowActivities } from './db/schema'
 import { and, gte, lte, sql, ne } from 'drizzle-orm'
+import { resetActivityStartTime } from './activityTracker'
 
 /**
  * Deletes all window activities from the database
@@ -107,14 +108,18 @@ export function registerWindowActivitiesHandlers() {
 
     // Delete all window activities
     ipcMain.handle('deleteAllWindowActivities', async () => {
-        return deleteAllWindowActivities()
+        const result = await deleteAllWindowActivities()
+        if (result.success) resetActivityStartTime()
+        return result
     })
 
     // Delete window activities in a date range
     ipcMain.handle(
         'deleteWindowActivitiesInRange',
         async (_event, startDate: string, endDate: string) => {
-            return deleteWindowActivitiesInRange(startDate, endDate)
+            const result = await deleteWindowActivitiesInRange(startDate, endDate)
+            if (result.success) resetActivityStartTime()
+            return result
         }
     )
 }
