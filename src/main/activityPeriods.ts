@@ -227,7 +227,13 @@ function bucketizeActivityPeriods(
 function extractDomain(url: string | null): string | null {
     if (!url) return null
     try {
-        return new URL(url).hostname
+        const parsed = new URL(url)
+        // Only extract domains from real web URLs, not internal browser pages
+        // (e.g. chrome://newtab, about:blank, edge://settings)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return null
+        }
+        return parsed.hostname
     } catch {
         return null
     }
