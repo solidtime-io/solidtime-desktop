@@ -67,6 +67,18 @@ let lastWindowInfo: WindowInfo | null = null
 let currentActivityStartTime: Date | null = null
 
 /**
+ * Resets the current activity start time to now.
+ * Call this when window activity data is cleared so the next
+ * recorded activity doesn't include time from before the clear.
+ */
+export function resetActivityStartTime(): void {
+    if (currentActivityStartTime) {
+        currentActivityStartTime = new Date()
+        logger.debug('Activity start time reset')
+    }
+}
+
+/**
  * Sanitizes a URL by removing query parameters and fragments
  * This protects privacy by removing potentially sensitive data
  */
