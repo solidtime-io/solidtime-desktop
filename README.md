@@ -60,10 +60,11 @@ $ npm run build:linux
 
 ## Contributing
 
-This project is in a very early stage. The structure and APIs are still subject to change and not stable.
-Therefore, we do not currently accept any contributions, unless you are a member of the team.
+Please open an issue or start a discussion and wait for approval before submitting a pull request. This does not apply to tiny fixes or changes however, please keep in mind that we might not merge PRs for various reasons. 
 
-As soon as we feel comfortable enough that the application structure is stable enough, we will open up the project for contributions.
+**If you submit an AI slop pull request without following the above-mentioned procedure, you will be banned from future contributions to solidtime.**
+
+Please read the [[CONTRIBUTING.md](./CONTRIBUTING.md)](https://github.com/solidtime-io/solidtime/blob/main/CONTRIBUTING.md) before sumbitting a Pull Request.
 
 ## Security
 
