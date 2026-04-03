@@ -37,7 +37,7 @@ if (process.contextIsolated || true) {
             updateIdleDetectionEnabled: (enabled: boolean) =>
                 ipcRenderer.send('updateIdleDetectionEnabled', enabled),
             updateActivityTrackingEnabled: (enabled: boolean) =>
-                ipcRenderer.send('updateActivityTrackingEnabled', enabled),
+                ipcRenderer.invoke('updateActivityTrackingEnabled', enabled),
             timerStateChanged: (running: boolean) => ipcRenderer.send('timerStateChanged', running),
             getWindowActivities: (startDate: string, endDate: string) =>
                 ipcRenderer.invoke('getWindowActivities', startDate, endDate),
