@@ -2,7 +2,12 @@
  * Merges multiple electron-builder update yml files for the same platform
  * but different architectures into a single yml file.
  *
- * Usage: node merge-update-ymls.js <output> <input1> <input2> [input3...]
+ * Usage: node merge-update-ymls.js [--prefer-arch <arch>] <output> <input1> <input2> [input3...]
+ *
+ * --prefer-arch <arch>  Architecture to prefer for the deprecated top-level
+ *                       path/sha512 fields (e.g. "x64", "arm64"). Older updaters
+ *                       only read the top-level path, so this controls which
+ *                       binary they download.
  *
  * See: https://github.com/electron-userland/electron-builder/issues/5592
  */
@@ -10,10 +15,20 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { parse, stringify } from 'yaml'
 
-const [, , outputPath, ...inputPaths] = process.argv
+const args = process.argv.slice(2)
+
+let preferArch = null
+if (args[0] === '--prefer-arch') {
+    args.shift()
+    preferArch = args.shift()
+}
+
+const [outputPath, ...inputPaths] = args
 
 if (!outputPath || inputPaths.length < 2) {
-    console.error('Usage: node merge-update-ymls.js <output> <input1> <input2> [input3...]')
+    console.error(
+        'Usage: node merge-update-ymls.js [--prefer-arch <arch>] <output> <input1> <input2> [input3...]'
+    )
     process.exit(1)
 }
 
@@ -52,11 +67,25 @@ if (dates.length > 0) {
 }
 
 // Keep deprecated top-level path/sha512 aligned with a sensible primary file
-// for older updaters/tools that still read them.
-const preferredFile =
-    merged.files.find((file) => file.url?.endsWith('.zip')) ??
-    merged.files.find((file) => file.url?.endsWith('.exe')) ??
-    merged.files[0]
+// for older updaters/tools that still read them. When --prefer-arch is set,
+// try to pick that architecture first so older clients download the right binary.
+const preferredFile = (() => {
+    if (preferArch) {
+        const archMatch =
+            merged.files.find(
+                (file) => file.url?.includes(preferArch) && file.url?.endsWith('.zip')
+            ) ??
+            merged.files.find(
+                (file) => file.url?.includes(preferArch) && file.url?.endsWith('.exe')
+            )
+        if (archMatch) return archMatch
+    }
+    return (
+        merged.files.find((file) => file.url?.endsWith('.zip')) ??
+        merged.files.find((file) => file.url?.endsWith('.exe')) ??
+        merged.files[0]
+    )
+})()
 
 if (preferredFile?.url) {
     merged.path = preferredFile.url

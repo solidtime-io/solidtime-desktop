@@ -137,7 +137,7 @@ jobs:
                   MAC_COUNT=$(echo "$MAC_YMLS" | wc -l)
                   if [ "$MAC_COUNT" -ge 2 ]; then
                     echo "Merging $MAC_COUNT latest-mac.yml files"
-                    node scripts/merge-update-ymls.js merged-latest-mac.yml $MAC_YMLS
+                    node scripts/merge-update-ymls.js --prefer-arch arm64 merged-latest-mac.yml $MAC_YMLS
                   else
                     echo "Only one latest-mac.yml found, copying as-is"
                     cp $(echo "$MAC_YMLS" | head -1) merged-latest-mac.yml
@@ -149,7 +149,7 @@ jobs:
                   WIN_COUNT=$(echo "$WIN_YMLS" | wc -l)
                   if [ "$WIN_COUNT" -ge 2 ]; then
                     echo "Merging $WIN_COUNT latest.yml files"
-                    node scripts/merge-update-ymls.js merged-latest.yml $WIN_YMLS
+                    node scripts/merge-update-ymls.js --prefer-arch x64 merged-latest.yml $WIN_YMLS
                   else
                     echo "Only one latest.yml found, copying as-is"
                     cp $(echo "$WIN_YMLS" | head -1) merged-latest.yml
