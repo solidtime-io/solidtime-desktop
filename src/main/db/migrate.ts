@@ -3,6 +3,7 @@ import { db } from './client'
 import path from 'path'
 import { app } from 'electron'
 import fs from 'fs'
+import * as Sentry from '@sentry/electron/main'
 
 export async function runMigrations(): Promise<void> {
     try {
@@ -12,8 +13,15 @@ export async function runMigrations(): Promise<void> {
         let migrationsFolder: string
 
         if (app.isPackaged) {
-            // Production: migrations are in the app.asar or extraResources
+            // Production: migrations are in extraResources
             migrationsFolder = path.join(process.resourcesPath, 'drizzle')
+
+            // Fallback for system Electron (e.g., AUR packages on Arch Linux)
+            // where process.resourcesPath points to the system Electron's
+            // resources dir instead of the app's
+            if (!fs.existsSync(migrationsFolder)) {
+                migrationsFolder = path.join(app.getAppPath(), '..', 'drizzle')
+            }
         } else {
             // Development: migrations are relative to the source
             migrationsFolder = path.join(__dirname, '../../drizzle')
@@ -30,6 +38,15 @@ export async function runMigrations(): Promise<void> {
 
         console.log('Migrations completed successfully')
     } catch (error) {
+        Sentry.captureException(error, {
+            tags: { context: 'runMigrations' },
+            extra: {
+                resourcesPath: process.resourcesPath,
+                appPath: app.getAppPath(),
+                isPackaged: app.isPackaged,
+                platform: process.platform,
+            },
+        })
         console.error('Migration failed:', error)
         throw error
     }
