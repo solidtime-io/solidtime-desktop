@@ -14,6 +14,7 @@ export function useMyMemberships() {
     const query = useQuery({
         queryKey: ['myMemberships'],
         queryFn: getMyMemberships,
+        gcTime: Infinity,
     })
     const memberships = computed<MyMemberships>(() => {
         return query.data.value?.data ?? []

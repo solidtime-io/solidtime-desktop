@@ -93,8 +93,8 @@ export function useTimeEntryStopMutation() {
             id: 'timeEntry',
         },
         mutationFn: (timeEntry: TimeEntry) => {
-            if (currentOrganizationId.value === null) {
-                throw new Error('No current organization id - create time entry')
+            if (!timeEntry.organization_id) {
+                throw new Error('No organization id on time entry - stop time entry')
             }
             if (timeEntry.id === '') {
                 throw new Error('No time entry id - stop time entry')
@@ -106,7 +106,7 @@ export function useTimeEntryStopMutation() {
                 { ...timeEntry },
                 {
                     params: {
-                        organization: currentOrganizationId.value,
+                        organization: timeEntry.organization_id,
                         timeEntry: timeEntry.id,
                     },
                 }
@@ -138,8 +138,8 @@ export function useTimeEntryUpdateMutation() {
         mutationFn: (timeEntry: TimeEntry) => {
             console.log('update time entry')
             console.log(timeEntry)
-            if (currentOrganizationId.value === null) {
-                throw new Error('No current organization id - update time entry')
+            if (!timeEntry.organization_id) {
+                throw new Error('No organization id on time entry - update time entry')
             }
             if (timeEntry.id === '') {
                 throw new Error('No time entry id - update time entry')
@@ -149,7 +149,7 @@ export function useTimeEntryUpdateMutation() {
             }
             return apiClient.value.updateTimeEntry(timeEntry, {
                 params: {
-                    organization: currentOrganizationId.value,
+                    organization: timeEntry.organization_id,
                     timeEntry: timeEntry.id,
                 },
             })
@@ -189,8 +189,9 @@ export function useTimeEntriesDeleteMutation() {
             id: 'timeEntry',
         },
         mutationFn: (timeEntries: TimeEntry[]) => {
-            if (currentOrganizationId.value === null) {
-                throw new Error('No current organization id - create time entry')
+            const organizationId = timeEntries[0].organization_id
+            if (!organizationId) {
+                throw new Error('No organization id on time entry - delete time entries')
             }
             const timeEntryIds = timeEntries.map((timeEntry) => {
                 if (offlineUuidStore[timeEntry.id]) {
@@ -203,7 +204,7 @@ export function useTimeEntriesDeleteMutation() {
                     ids: timeEntryIds,
                 },
                 params: {
-                    organization: currentOrganizationId.value,
+                    organization: organizationId,
                 },
             })
         },
@@ -273,8 +274,8 @@ export function useCurrentTimeEntryUpdateMutation() {
             id: 'timeEntry',
         },
         mutationFn: (timeEntry: TimeEntry) => {
-            if (currentOrganizationId.value === null) {
-                throw new Error('No current organization id - update time entry')
+            if (!timeEntry.organization_id) {
+                throw new Error('No organization id on time entry - update time entry')
             }
             if (timeEntry.id === '') {
                 throw new Error('No time entry id - update time entry')
@@ -284,7 +285,7 @@ export function useCurrentTimeEntryUpdateMutation() {
             }
             return apiClient.value.updateTimeEntry(timeEntry, {
                 params: {
-                    organization: currentOrganizationId.value,
+                    organization: timeEntry.organization_id,
                     timeEntry: timeEntry.id,
                 },
             })
@@ -311,15 +312,15 @@ export function useTimeEntryDeleteMutation() {
             id: 'timeEntry',
         },
         mutationFn: (timeEntry: TimeEntry) => {
-            if (currentOrganizationId.value === null) {
-                throw new Error('No current organization id - create time entry')
+            if (!timeEntry.organization_id) {
+                throw new Error('No organization id on time entry - delete time entry')
             }
             if (offlineUuidStore[timeEntry.id]) {
                 timeEntry.id = offlineUuidStore[timeEntry.id]
             }
             return apiClient.value.deleteTimeEntry(undefined, {
                 params: {
-                    organization: currentOrganizationId.value,
+                    organization: timeEntry.organization_id,
                     timeEntry: timeEntry.id,
                 },
             })

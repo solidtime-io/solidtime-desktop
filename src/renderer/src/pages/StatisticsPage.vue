@@ -284,9 +284,7 @@ const totalTime = computed(() => {
                         class="flex items-center justify-center py-12">
                         <div class="text-center text-text-tertiary">
                             <p class="text-lg">No activity data available</p>
-                            <p class="text-sm mt-2">
-                              Check back in a few minutes
-                            </p>
+                            <p class="text-sm mt-2">Check back in a few minutes</p>
                         </div>
                     </div>
 

@@ -53,9 +53,12 @@ export function useTimer() {
      */
     async function stopTimer(endTime?: string) {
         const stoppedTimeEntry = { ...currentTimeEntry.value }
-        currentMembershipId.value = memberships.value.find(
+        const matchingMembershipId = memberships.value.find(
             (membership) => membership.organization.id === stoppedTimeEntry.organization_id
         )?.id
+        if (matchingMembershipId) {
+            currentMembershipId.value = matchingMembershipId
+        }
         currentTimeEntry.value = { ...emptyTimeEntry }
 
         await timeEntryStop.mutateAsync({
