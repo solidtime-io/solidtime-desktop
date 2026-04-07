@@ -31,7 +31,7 @@ export function useTimer() {
     const timeEntryStop = useTimeEntryStopMutation()
     const timeEntryCreate = useTimeEntryCreateMutation()
 
-    const { memberships } = useMyMemberships()
+    const { memberships, currentOrganizationId } = useMyMemberships()
 
     /**
      * Check if there's an active timer running
@@ -78,6 +78,7 @@ export function useTimer() {
 
         currentTimeEntry.value = {
             ...emptyTimeEntry,
+            organization_id: currentOrganizationId.value ?? '',
             project_id: current.project_id,
             task_id: current.task_id,
             description: current.description,
@@ -104,6 +105,8 @@ export function useTimer() {
         if (lastTimeEntry.value && lastTimeEntry.value.start) {
             currentTimeEntry.value = {
                 ...emptyTimeEntry,
+                organization_id:
+                    lastTimeEntry.value.organization_id || currentOrganizationId.value || '',
                 project_id: lastTimeEntry.value.project_id,
                 task_id: lastTimeEntry.value.task_id,
                 description: lastTimeEntry.value.description,
@@ -114,6 +117,7 @@ export function useTimer() {
         } else {
             currentTimeEntry.value = {
                 ...emptyTimeEntry,
+                organization_id: currentOrganizationId.value ?? '',
                 start: startTime,
             }
         }
