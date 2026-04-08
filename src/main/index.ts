@@ -51,6 +51,7 @@ if (!isE2ETesting()) {
     const gotTheLock = app.requestSingleInstanceLock()
     if (!gotTheLock) {
         app.quit()
+        process.exit(0)
     }
 }
 
@@ -202,7 +203,7 @@ app.on('before-quit', async (event) => {
         return
     }
 
-    event.preventDefault()
+    event?.preventDefault()
 
     try {
         console.log('App quitting - saving active periods...')
