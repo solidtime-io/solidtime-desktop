@@ -15,6 +15,7 @@ import { logout } from '../utils/oauth.ts'
 import {
     isWidgetActivated,
     isTrayTimerActivated,
+    trayTemplate,
     idleDetectionEnabled,
     idleThresholdMinutes,
     activityTrackingEnabled,
@@ -28,7 +29,7 @@ import {
     useDeleteActivityPeriodsInRangeMutation,
     useClearIconCacheMutation,
 } from '../utils/windowActivities.ts'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { dayjs } from '../utils/dayjs.ts'
 import { EllipsisVerticalIcon } from '@heroicons/vue/24/outline'
@@ -75,6 +76,88 @@ const showDeleteActivityPeriodsRangeModal = ref(false)
 const selectedRangeLabel = ref('')
 const selectedRangeStart = ref('')
 const selectedRangeEnd = ref('')
+
+// Tray template live preview
+const previewSeconds = ref(5025) // starts at 01:23:45
+let previewInterval: ReturnType<typeof setInterval> | null = null
+
+interface PreviewSegment {
+    text: string
+    color?: string
+}
+
+function resolvePreviewTemplate(template: string, totalSeconds: number): PreviewSegment[] {
+    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0')
+    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')
+    const s = (totalSeconds % 60).toString().padStart(2, '0')
+
+    const data: Record<string, { value: string; color?: string }> = {
+        hours: { value: h },
+        minutes: { value: m },
+        seconds: { value: s },
+        project: { value: 'Project Name' },
+        project_colored: { value: 'Project Name', color: '#ef5350' },
+        description: { value: 'Task description' },
+        task: { value: 'Task name' },
+    }
+
+    const segments: PreviewSegment[] = []
+    const regex = /\{(\w+)\}/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(template)) !== null) {
+        if (match.index > lastIndex) {
+            segments.push({ text: template.slice(lastIndex, match.index) })
+        }
+        const key = match[1]
+        const entry = data[key]
+        if (entry && entry.value) {
+            segments.push({ text: entry.value, color: entry.color })
+        }
+        lastIndex = match.index + match[0].length
+    }
+    if (lastIndex < template.length) {
+        segments.push({ text: template.slice(lastIndex) })
+    }
+    return segments
+}
+
+const previewSegments = computed(() =>
+    resolvePreviewTemplate(trayTemplate.value, previewSeconds.value)
+)
+
+function startPreviewTimer() {
+    if (previewInterval) return
+    previewInterval = setInterval(() => {
+        previewSeconds.value++
+    }, 1000)
+}
+
+function stopPreviewTimer() {
+    if (previewInterval) {
+        clearInterval(previewInterval)
+        previewInterval = null
+    }
+    previewSeconds.value = 5025
+}
+
+watch(isTrayTimerActivated, (enabled) => {
+    if (enabled) {
+        startPreviewTimer()
+    } else {
+        stopPreviewTimer()
+    }
+})
+
+onMounted(() => {
+    if (isTrayTimerActivated.value) {
+        startPreviewTimer()
+    }
+})
+
+onUnmounted(() => {
+    stopPreviewTimer()
+})
 
 type TimeRangeOption = { label: string; minutes: number }
 
@@ -293,6 +376,39 @@ watch(activityTrackingEnabled, (enabled) => {
                         <Checkbox v-model:checked="isTrayTimerActivated" name="tray_timer" />
                         <span class="ms-2 text-sm">Show Tray / Menu Bar Timer</span>
                     </label>
+                    <div v-if="isTrayTimerActivated" class="ml-6 space-y-3">
+                        <div>
+                            <label for="trayTemplate" class="text-sm">Display Template</label>
+                            <input
+                                id="trayTemplate"
+                                v-model="trayTemplate"
+                                type="text"
+                                class="mt-1 block w-full px-2 py-1 text-sm bg-card-background border border-card-background-separator rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :placeholder="'{hours}:{minutes}:{seconds} – {project_colored}'" />
+                        </div>
+                        <div class="text-xs text-muted-foreground space-y-1">
+                            <div>Available placeholders:</div>
+                            <div class="flex flex-wrap gap-x-3 gap-y-1">
+                                <span><code>{hours}</code> — hours</span>
+                                <span><code>{minutes}</code> — minutes</span>
+                                <span><code>{seconds}</code> — seconds</span>
+                                <span><code>{project_colored}</code> — project (colored)</span>
+                                <span><code>{project}</code> — project (plain)</span>
+                                <span><code>{description}</code> — description</span>
+                                <span><code>{task}</code> — task name</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-muted-foreground">Preview:</span>
+                            <span class="text-sm font-mono">
+                                <span
+                                    v-for="seg in previewSegments"
+                                    :key="seg.text"
+                                    :style="seg.color ? { color: seg.color } : {}"
+                                    >{{ seg.text }}</span>
+                            </span>
+                        </div>
+                    </div>
                     <label class="flex items-center">
                         <Checkbox v-model:checked="idleDetectionEnabled" name="idleDetection" />
                         <span class="ms-2 text-sm">Enable Idle Detection</span>

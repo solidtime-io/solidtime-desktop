@@ -40,6 +40,7 @@
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
         "@miniben90/x-win": "^3.4.0",
+        "@napi-rs/canvas": "^0.1.97",
         "@sentry/electron": "^5.7.0",
         "@sentry/vite-plugin": "^2.22.8",
         "@solidtime/api": "^0.0.6",
