@@ -535,7 +535,7 @@ export function buildInterfaceClass(dbusModule: DBusModule): any {
         }
 
         // The KWin script calls this method over DBus on every focus/caption
-        // change. Signature: sssisiiiib = caption, class, name, pid, id, x, y,
+        // change. Signature: sssisiiii = caption, class, name, pid, id, x, y,
         // w, h, fullscreen. `internalId` is KWin's UUID string; we accept it
         // for signature compatibility with the script but don't currently
         // use it (the numeric pid is sufficient for downstream storage).
@@ -548,8 +548,7 @@ export function buildInterfaceClass(dbusModule: DBusModule): any {
             x: number,
             y: number,
             width: number,
-            height: number,
-            fullScreen: boolean
+            height: number
         ): void {
             const event: KWinWindowEvent = {
                 caption,
@@ -561,7 +560,7 @@ export function buildInterfaceClass(dbusModule: DBusModule): any {
                 y,
                 width,
                 height,
-                fullScreen,
+                fullScreen: false,
             }
             const sequence = this._nextSequence
             this._nextSequence += 1
@@ -584,13 +583,14 @@ export function buildInterfaceClass(dbusModule: DBusModule): any {
     }
 
     // dbus-next imperative method registration. The key names here must match
-    // the method names on the class. Signature 'sssisiiiib' documents 10 args:
+    // the method names on the class. Signature 'sssisiiii' documents 10 args:
     //   s caption, s resourceClass, s resourceName, i pid, s internalId,
-    //   i x, i y, i width, i height, b fullScreen.
+    //   i x, i y, i width, i height.
+    //   fullScreen is omitted — KWin's callDBus supports at most 9 args.
     WindowTrackerInterface.configureMembers({
         methods: {
             NotifyActiveWindow: {
-                inSignature: 'sssisiiiib',
+                inSignature: 'sssisiiii',
                 outSignature: '',
             },
         },

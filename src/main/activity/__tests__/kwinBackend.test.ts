@@ -120,7 +120,7 @@ describe('buildInterfaceClass', () => {
         expect(configuredMembers).toEqual({
             methods: {
                 NotifyActiveWindow: {
-                    inSignature: 'sssisiiiib',
+                    inSignature: 'sssisiiii',
                     outSignature: '',
                 },
             },
@@ -153,8 +153,7 @@ describe('buildInterfaceClass', () => {
             100, // x
             200, // y
             800, // width
-            600, // height
-            false // fullScreen
+            600 // height
         )
 
         // enrichFromProc is async, so wait for it
@@ -198,8 +197,7 @@ describe('buildInterfaceClass', () => {
             0,
             0,
             1920,
-            1080,
-            true
+            1080
         )
 
         await vi.waitFor(() => expect(received).toHaveLength(1))
@@ -207,7 +205,7 @@ describe('buildInterfaceClass', () => {
         const info = received[0]
         expect(info.info.execName).toBe('konsole') // falls back to resourceName
         expect(info.info.name).toBe('org.kde.konsole') // resourceClass
-        expect(info.position.isFullScreen).toBe(true)
+        expect(info.position.isFullScreen).toBe(false)
         expect(info.windowKey).toBe('uuid')
     })
 
@@ -226,7 +224,7 @@ describe('buildInterfaceClass', () => {
         const received: WindowInfo[] = []
         instance.setHandler((info: WindowInfo) => received.push(info))
 
-        instance.NotifyActiveWindow('Window', '', 'myapp', 100, 'uuid', 0, 0, 100, 100, false)
+        instance.NotifyActiveWindow('Window', '', 'myapp', 100, 'uuid', 0, 0, 100, 100)
 
         await vi.waitFor(() => expect(received).toHaveLength(1))
 
@@ -268,8 +266,7 @@ describe('buildInterfaceClass', () => {
             0,
             0,
             100,
-            100,
-            false
+            100
         )
         instance.NotifyActiveWindow(
             'Second Window',
@@ -280,8 +277,7 @@ describe('buildInterfaceClass', () => {
             10,
             10,
             100,
-            100,
-            false
+            100
         )
 
         await vi.waitFor(() => expect(received).toHaveLength(2))

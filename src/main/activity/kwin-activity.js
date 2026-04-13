@@ -46,8 +46,7 @@
             Math.round(Number(geom.x) || 0),
             Math.round(Number(geom.y) || 0),
             Math.round(Number(geom.width) || 0),
-            Math.round(Number(geom.height) || 0),
-            Boolean(win.fullScreen)
+            Math.round(Number(geom.height) || 0)
         )
     }
 

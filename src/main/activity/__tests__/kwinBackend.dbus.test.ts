@@ -91,7 +91,6 @@ describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {
         y: number,
         width: number,
         height: number,
-        fullScreen: boolean
     ): Promise<void> {
         if (!callerBus) {
             callerBus = dbusModule.sessionBus()
@@ -107,8 +106,7 @@ describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {
             x,
             y,
             width,
-            height,
-            fullScreen
+            height
         )
     }
 
@@ -138,8 +136,7 @@ describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {
                 10,
                 20,
                 1920,
-                1080,
-                false
+                1080
             )
 
             // Wait for the async enrichFromProc to complete
