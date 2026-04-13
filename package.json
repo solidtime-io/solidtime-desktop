@@ -48,7 +48,6 @@
         "@solidtime/api": "^0.0.6",
         "@solidtime/ui": "^0.0.20",
         "better-sqlite3": "^11.7.0",
-        "dbus-next": "^0.10.2",
         "drizzle-orm": "^0.44.7",
         "electron-updater": "^6.6.2",
         "pinia": "^3.0.3",
