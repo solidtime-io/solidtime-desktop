@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { is } from '@electron-toolkit/utils'
 import { isE2ETesting } from './env'
 
 let mainWindowInstance: BrowserWindow | null = null
@@ -56,6 +57,44 @@ export function initializeMainWindow(icon: string) {
     return mainWindow
 }
 
+/**
+ * In dev mode, open OAuth URLs in an inline BrowserWindow instead of the
+ * system browser. This avoids the solidtime:// protocol handler which
+ * doesn't reliably route back to the dev Electron process.
+ * The window intercepts the solidtime://oauth/callback redirect and
+ * forwards it to the renderer as a deeplink.
+ */
+function openDevAuthWindow(url: string, mainWindow: BrowserWindow): void {
+    const authWindow = new BrowserWindow({
+        width: 800,
+        height: 700,
+        parent: mainWindow,
+        modal: false,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+        },
+    })
+
+    authWindow.loadURL(url)
+
+    // Intercept navigations to the solidtime:// callback scheme
+    authWindow.webContents.on('will-navigate', (_event, navUrl) => {
+        if (navUrl.startsWith('solidtime://')) {
+            mainWindow.webContents.send('openDeeplink', navUrl)
+            authWindow.close()
+        }
+    })
+
+    // Also catch redirects that come through will-redirect
+    authWindow.webContents.on('will-redirect', (_event, navUrl) => {
+        if (navUrl.startsWith('solidtime://')) {
+            mainWindow.webContents.send('openDeeplink', navUrl)
+            authWindow.close()
+        }
+    })
+}
+
 export function registerMainWindowListeners(mainWindow: BrowserWindow) {
     ipcMain.on('startTimer', () => {
         mainWindow.webContents.send('startTimer')
@@ -71,7 +110,13 @@ export function registerMainWindowListeners(mainWindow: BrowserWindow) {
     })
 
     mainWindow.webContents.setWindowOpenHandler((details) => {
-        shell.openExternal(details.url)
+        if (is.dev && details.url.includes('/oauth/authorize')) {
+            // In dev mode, handle OAuth in an inline window to avoid
+            // protocol handler issues with the solidtime:// scheme
+            openDevAuthWindow(details.url, mainWindow)
+        } else {
+            shell.openExternal(details.url)
+        }
         return { action: 'deny' }
     })
 }
