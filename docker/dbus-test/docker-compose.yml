@@ -1,0 +1,14 @@
+services:
+  dbus-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../../:/app
+      # Use a separate node_modules inside the container so native binaries
+      # (compiled for Linux) don't collide with the host's (macOS/Windows).
+      - dbus-test-node-modules:/app/node_modules
+    working_dir: /app
+
+volumes:
+  dbus-test-node-modules:

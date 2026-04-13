@@ -2,67 +2,12 @@ import { db } from './db/client'
 import { windowActivities, validateNewWindowActivity } from './db/schema'
 import { getAppSettings } from './settings'
 import { hasScreenRecordingPermission } from './permissions'
-import { ipcMain, app } from 'electron'
+import { ipcMain } from 'electron'
 import { logger } from './logger'
-
-// Lazy-load x-win module with detailed error reporting
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let xWinModule: any = null
-let xWinLoadError: Error | null = null
-
-async function loadXWinModule() {
-    if (xWinModule) return xWinModule
-    if (xWinLoadError) throw xWinLoadError
-
-    try {
-        console.log('=== ATTEMPTING TO LOAD @miniben90/x-win ===')
-        console.log('Process platform:', process.platform)
-        console.log('Process arch:', process.arch)
-        console.log('Process versions:', JSON.stringify(process.versions, null, 2))
-        console.log('__dirname:', __dirname)
-        console.log('process.cwd():', process.cwd())
-        console.log('app.isPackaged:', app.isPackaged)
-
-        xWinModule = await import('@miniben90/x-win')
-        console.log('=== @miniben90/x-win LOADED SUCCESSFULLY ===')
-        return xWinModule
-    } catch (error) {
-        console.error('=== FAILED TO LOAD @miniben90/x-win ===')
-        console.error('Error name:', error instanceof Error ? error.name : 'Unknown')
-        console.error('Error message:', error instanceof Error ? error.message : String(error))
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
-        console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
-
-        xWinLoadError = error instanceof Error ? error : new Error(String(error))
-        throw xWinLoadError
-    }
-}
-
-interface WindowInfo {
-    id: number
-    title: string
-    info: {
-        execName: string
-        name: string
-        path: string
-        processId: number
-    }
-    os: string
-    position: {
-        x: number
-        y: number
-        width: number
-        height: number
-        isFullScreen: boolean
-    }
-    usage: {
-        memory: number
-    }
-    url?: string
-}
+import { isSameWindowActivity, type ActivityBackend, type WindowInfo } from './activity/backend'
 
 let activityTrackingEnabled = false
-let subscriptionId: number | null = null
+let backend: ActivityBackend | null = null
 let lastWindowInfo: WindowInfo | null = null
 let currentActivityStartTime: Date | null = null
 
@@ -93,6 +38,34 @@ function sanitizeUrl(url: string | undefined): string | null {
         // If URL parsing fails, return null to avoid storing invalid data
         return null
     }
+}
+
+/**
+ * Picks the appropriate activity backend for the current platform.
+ *
+ * - Linux + Wayland + KDE → native KWin script backend (KWinBackend)
+ * - Everything else → @miniben90/x-win wrapper (XWinBackend)
+ *
+ * Other Wayland compositors (GNOME, Sway, Hyprland) currently fall through
+ * to XWinBackend, which either works via its built-in GNOME Shell extension
+ * path or fails on unsupported compositors. Adding dedicated backends for
+ * those is future work.
+ */
+async function pickBackend(): Promise<ActivityBackend> {
+    if (process.platform === 'linux') {
+        const sessionType = process.env.XDG_SESSION_TYPE
+        const currentDesktop = (process.env.XDG_CURRENT_DESKTOP || '').toLowerCase()
+        const isWayland = sessionType === 'wayland'
+        const isKde = currentDesktop.includes('kde')
+        if (isWayland && isKde) {
+            logger.info('Selecting KWinBackend for KDE Plasma Wayland')
+            const { KWinBackend } = await import('./activity/kwinBackend')
+            return new KWinBackend()
+        }
+    }
+    logger.info('Selecting XWinBackend')
+    const { XWinBackend } = await import('./activity/xWinBackend')
+    return new XWinBackend()
 }
 
 /**
@@ -140,90 +113,72 @@ function registerActivityTrackerListeners() {
  */
 export async function startActivityTracking(): Promise<void> {
     // Check if already tracking
-    if (subscriptionId !== null) {
+    if (backend !== null) {
         logger.info('Activity tracking already running')
         return
     }
 
-    // Check permissions on macOS
+    // Check permissions on macOS. The first attempt to get window info will
+    // trigger the permission prompt anyway, so we just log here.
     if (!hasScreenRecordingPermission()) {
         logger.warn('Screen recording permission not granted. Activity tracking may not work.')
-        // We'll still try to start tracking - the first attempt to get window info
-        // will trigger the permission prompt on macOS
     }
 
     logger.info('Starting activity tracking...')
 
-    let xWin
+    let chosen: ActivityBackend
     try {
-        xWin = await loadXWinModule()
+        chosen = await pickBackend()
     } catch (error) {
-        logger.error('Cannot start activity tracking - x-win module failed to load:', error)
+        logger.error('Failed to construct activity backend:', error)
         return
     }
 
     try {
-        // Get initial window state
-        const initialWindow = await xWin.activeWindowAsync()
-        if (initialWindow) {
-            lastWindowInfo = initialWindow as WindowInfo
-            currentActivityStartTime = new Date()
-            logger.debug('Initial window:', lastWindowInfo.info.name, '-', lastWindowInfo.title)
-        }
+        await chosen.start((windowInfo) => {
+            void handleWindowChange(windowInfo)
+        })
+        backend = chosen
+        logger.info('Activity tracking started')
     } catch (error) {
-        logger.error('Failed to get initial window:', error)
-        // This might be due to missing permissions - log but continue
+        logger.error('Failed to start activity backend:', error)
+        // Backend may have partially started; best-effort cleanup.
+        try {
+            await chosen.stop()
+        } catch {
+            // ignore
+        }
     }
-
-    // Subscribe to window changes
-    subscriptionId = xWin.subscribeActiveWindow(async (error, windowInfo) => {
-        if (error) {
-            logger.error('Error in window subscription:', error)
-            return
-        }
-
-        if (!windowInfo) {
-            return
-        }
-
-        await handleWindowChange(windowInfo as WindowInfo)
-    })
-
-    logger.info('Activity tracking started with subscription ID:', subscriptionId)
 }
 
 /**
- * Handles a window change event
+ * Invoked by the active backend every time the focused window changes.
+ *
+ * Saves the previous window's activity and marks the new window as current.
+ * Writes to the database only when activity tracking is enabled — this lets
+ * backends keep emitting events briefly during shutdown without recording
+ * phantom activity.
  */
 async function handleWindowChange(windowInfo: WindowInfo): Promise<void> {
-    const now = new Date()
+    const isNewWindow = !lastWindowInfo || !isSameWindowActivity(lastWindowInfo, windowInfo)
 
-    // Check if this is a different window than the last one
-    const isNewWindow =
-        !lastWindowInfo ||
-        lastWindowInfo.id !== windowInfo.id ||
-        lastWindowInfo.title !== windowInfo.title ||
-        lastWindowInfo.info.name !== windowInfo.info.name
+    if (!isNewWindow) {
+        return
+    }
 
-    if (isNewWindow && lastWindowInfo && currentActivityStartTime) {
-        // Save the previous window activity (check enabled state before saving)
-        if (activityTrackingEnabled) {
-            try {
-                await saveWindowActivity(lastWindowInfo, currentActivityStartTime, now)
-            } catch (error) {
-                logger.error('Failed to save window activity:', error)
-            }
+    if (lastWindowInfo && currentActivityStartTime && activityTrackingEnabled) {
+        const now = new Date()
+        try {
+            await saveWindowActivity(lastWindowInfo, currentActivityStartTime, now)
+        } catch (error) {
+            logger.error('Failed to save previous window activity:', error)
         }
-
-        // Update to new window
-        lastWindowInfo = windowInfo
         currentActivityStartTime = now
+    }
 
-        logger.debug('Window changed to:', windowInfo.info.name, '-', windowInfo.title)
-    } else if (!lastWindowInfo) {
-        // First window detected
-        lastWindowInfo = windowInfo
-        currentActivityStartTime = now
+    lastWindowInfo = windowInfo
+    if (!currentActivityStartTime) {
+        currentActivityStartTime = new Date()
     }
 }
 
@@ -330,10 +285,13 @@ export async function stopActivityTracking(): Promise<void> {
     // Save the current window activity before stopping
     await saveCurrentActivityIfNeeded()
 
-    // Unsubscribe from window changes
-    if (subscriptionId !== null && xWinModule) {
-        xWinModule.unsubscribeAllActiveWindow()
-        subscriptionId = null
+    if (backend) {
+        try {
+            await backend.stop()
+        } catch (error) {
+            logger.error('Failed to stop activity backend:', error)
+        }
+        backend = null
     }
 
     lastWindowInfo = null

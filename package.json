@@ -26,7 +26,10 @@
         "build:win": "npm run build && electron-builder --win",
         "build:mac": "npm run build && electron-builder --mac",
         "build:linux": "npm run build && electron-builder --linux",
-        "test:e2e": "npx playwright test --config=e2e/playwright.config.ts"
+        "build:linux:flatpak": "npm run build && electron-builder --linux flatpak",
+        "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
+        "test:unit": "vitest run",
+        "test:unit:watch": "vitest"
     },
     "build": {
         "extends": "./electron-builder.yml",
@@ -45,10 +48,14 @@
         "@solidtime/api": "^0.0.6",
         "@solidtime/ui": "^0.0.20",
         "better-sqlite3": "^11.7.0",
+        "dbus-next": "^0.10.2",
         "drizzle-orm": "^0.44.7",
         "electron-updater": "^6.6.2",
         "pinia": "^3.0.3",
         "vue-router": "^4.6.3"
+    },
+    "optionalDependencies": {
+        "dbus-next": "^0.10.2"
     },
     "devDependencies": {
         "@electron-toolkit/eslint-config": "^1.0.2",
@@ -87,6 +94,7 @@
         "tailwindcss-animate": "^1.0.7",
         "typescript": "~5.5.2",
         "vite": "^6.1.7",
+        "vitest": "^3.2.4",
         "vue": "^3.4.30",
         "vue-tsc": "^2.0.22",
         "zod-validation-error": "^3.3.1"
