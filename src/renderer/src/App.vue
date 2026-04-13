@@ -137,6 +137,8 @@ watchEffect(async () => {
 const showInstanceSettingsModal = ref(false)
 
 import { useMagicKeys, whenever } from '@vueuse/core'
+const isMac = window.electron.process.platform === 'darwin'
+
 const keys = useMagicKeys()
 const cmdComma = keys['Cmd+,']
 whenever(cmdComma, () => {
@@ -153,12 +155,17 @@ whenever(cmdComma, () => {
     <div class="flex h-screen">
         <div class="flex-1 flex flex-col">
             <div
-                class="h-10 w-full bg-background border-b border-border-primary flex justify-end items-center pr-3">
-                <div class="flex-1 h-full pl-20" style="-webkit-app-region: drag"></div>
+                class="h-10 w-full bg-background border-b border-border-primary flex items-center"
+                :class="isMac ? 'justify-end pr-3' : 'justify-start pl-3'">
+                <div
+                    v-if="isMac"
+                    class="flex-1 h-full pl-20"
+                    style="-webkit-app-region: drag"></div>
                 <div v-if="isLoggedIn" class="flex items-center space-x-2">
                     <UpdateStatusBar></UpdateStatusBar>
                     <OrganizationSwitcher></OrganizationSwitcher>
                 </div>
+                <div v-if="!isMac" class="flex-1 h-full" style="-webkit-app-region: drag"></div>
             </div>
             <div v-if="isLoggedIn" class="flex-1 flex flex-col overflow-hidden">
                 <div class="flex-1 flex overflow-hidden">

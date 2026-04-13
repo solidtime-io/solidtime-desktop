@@ -18,7 +18,9 @@ export function initializeMainWindow(icon: string) {
         height: 800,
         show: false,
         backgroundColor: '#0f1011',
-        titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+        titleBarStyle: 'hidden',
+        // expose window controls in Windows/Linux
+        ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {}),
         autoHideMenuBar: true,
         ...(process.platform === 'linux' ? { icon } : {}),
         webPreferences: {
