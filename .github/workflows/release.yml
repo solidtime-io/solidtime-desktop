@@ -47,7 +47,7 @@ jobs:
             - name: Install Node.js
               uses: actions/setup-node@v3
               with:
-                  node-version: 20
+                  node-version: 22
 
             - name: Set version from tag
               shell: bash
@@ -117,7 +117,7 @@ jobs:
             - name: Install Node.js
               uses: actions/setup-node@v3
               with:
-                  node-version: 20
+                  node-version: 22
 
             - name: Install yaml package
               run: npm install --no-save --ignore-scripts yaml
