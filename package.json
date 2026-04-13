@@ -53,9 +53,7 @@
         "drizzle-orm": "^0.45.2",
         "electron-updater": "^6.6.2",
         "pinia": "^3.0.3",
-        "vue-router": "^5.0.4"
-    },
-    "optionalDependencies": {
+        "vue-router": "^5.0.4",
         "dbus-next": "^0.10.2"
     },
     "devDependencies": {
