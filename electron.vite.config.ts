@@ -1,7 +1,7 @@
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -57,9 +57,9 @@ export default defineConfig({
     main: {
         build: {
             sourcemap: true,
+            externalizeDeps: true,
         },
         plugins: [
-            externalizeDepsPlugin(),
             ...(isProduction
                 ? [
                       sentryVitePlugin({
@@ -73,7 +73,6 @@ export default defineConfig({
 
     preload: {
         plugins: [
-            externalizeDepsPlugin(),
             ...(isProduction
                 ? [
                       sentryVitePlugin({
@@ -85,6 +84,7 @@ export default defineConfig({
         ],
         build: {
             sourcemap: true,
+            externalizeDeps: true,
             rollupOptions: {
                 input: {
                     index: resolve(__dirname, 'src/preload/index.ts'),
