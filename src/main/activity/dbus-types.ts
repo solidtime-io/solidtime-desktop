@@ -30,12 +30,26 @@ export interface DBusProxyObject {
     getInterface(name: string): DBusProxyInterface
 }
 
+export interface DBusCallMessage {
+    destination: string
+    path: string
+    interface: string
+    member: string
+    signature: string
+    body: unknown[]
+}
+
+export interface DBusCallReply {
+    body: unknown[]
+}
+
 export interface DBusMessageBus {
     requestName(name: string, flags: number): Promise<void>
     releaseName(name: string): Promise<void>
     getProxyObject(service: string, objectPath: string): Promise<DBusProxyObject>
     addMethodHandler(handler: DBusMethodHandler): void
     removeMethodHandler(handler: DBusMethodHandler): void
+    call(msg: unknown): Promise<DBusCallReply>
     send(msg: unknown): void
     export(objectPath: string, iface: unknown): void
     disconnect(): void

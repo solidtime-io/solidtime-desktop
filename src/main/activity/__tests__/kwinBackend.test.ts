@@ -291,6 +291,47 @@ describe('buildInterfaceClass', () => {
     })
 })
 
+describe('KWinBackend.loadScript', () => {
+    it('uses bus.call() with explicit ss signature to avoid dbus-next overload issues', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const backend = new KWinBackend() as any
+
+        const constructedMsg = { type: 'message' }
+        const MockMessage = vi.fn().mockReturnValue(constructedMsg)
+
+        backend.dbusModule = {
+            Message: MockMessage,
+        }
+        backend.bus = {
+            call: vi.fn().mockResolvedValue({ body: [42] }),
+        }
+
+        const id = await backend.loadScript('/tmp/test.js', 'test-plugin')
+
+        expect(id).toBe(42)
+        expect(MockMessage).toHaveBeenCalledWith({
+            destination: 'org.kde.KWin',
+            path: '/Scripting',
+            interface: 'org.kde.kwin.Scripting',
+            member: 'loadScript',
+            signature: 'ss',
+            body: ['/tmp/test.js', 'test-plugin'],
+        })
+        expect(backend.bus.call).toHaveBeenCalledWith(constructedMsg)
+    })
+
+    it('throws on negative script ID', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const backend = new KWinBackend() as any
+        backend.dbusModule = { Message: vi.fn().mockReturnValue({}) }
+        backend.bus = { call: vi.fn().mockResolvedValue({ body: [-1] }) }
+
+        await expect(backend.loadScript('/tmp/test.js', 'bad-plugin')).rejects.toThrow(
+            'loadScript returned invalid ID -1'
+        )
+    })
+})
+
 describe('KWinBackend restart recovery', () => {
     it('reloads only the persistent script after a KWin restart', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

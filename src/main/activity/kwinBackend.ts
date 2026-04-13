@@ -10,6 +10,7 @@ import {
     type WindowInfo,
 } from './backend'
 import type {
+    DBusCallMessage,
     DBusMessageBus,
     DBusMethodCallMessage,
     DBusMethodHandler,
@@ -401,14 +402,27 @@ export class KWinBackend implements ActivityBackend {
 
     /**
      * Calls org.kde.KWin.Scripting.loadScript and returns the numeric script ID.
+     *
+     * KWin exposes two overloads of loadScript — `(filePath)` and
+     * `(filePath, pluginName)`. dbus-next's proxy layer cannot distinguish
+     * overloaded methods and may pick the wrong signature, so we use a
+     * low-level bus.call() with an explicit 'ss' signature instead.
      */
     private async loadScript(filePath: string, pluginName: string): Promise<number> {
-        const scripting = await this.bus!.getProxyObject(KWIN_SERVICE, KWIN_SCRIPTING_PATH)
-        const ifc = scripting.getInterface(KWIN_SCRIPTING_IFACE)
-        const result = await ifc.loadScript(filePath, pluginName)
-        const id = Number(result)
+        const msg = new (this.dbusModule!.Message as unknown as {
+            new (args: DBusCallMessage): unknown
+        })({
+            destination: KWIN_SERVICE,
+            path: KWIN_SCRIPTING_PATH,
+            interface: KWIN_SCRIPTING_IFACE,
+            member: 'loadScript',
+            signature: 'ss',
+            body: [filePath, pluginName],
+        })
+        const reply = await this.bus!.call(msg)
+        const id = Number(reply.body[0])
         if (!Number.isFinite(id) || id < 0) {
-            throw new Error(`loadScript returned invalid ID ${result} for plugin "${pluginName}"`)
+            throw new Error(`loadScript returned invalid ID ${id} for plugin "${pluginName}"`)
         }
         return id
     }
