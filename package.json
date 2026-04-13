@@ -20,6 +20,8 @@
         "start": "electron-vite preview",
         "preview": "electron-vite preview",
         "dev": "electron-vite dev",
+        "dev:local": "SOLIDTIME_DIR=../solidtime electron-vite dev",
+        "build:local": "SOLIDTIME_DIR=../solidtime npm run typecheck && SOLIDTIME_DIR=../solidtime electron-vite build",
         "build": "npm run typecheck && electron-vite build",
         "postinstall": "electron-builder install-app-deps",
         "build:unpack": "npm run build && electron-builder --dir",
