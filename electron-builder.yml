@@ -68,6 +68,38 @@ linux:
     category: Utility
     mimeTypes:
         - x-scheme-handler/solidtime
+flatpak:
+    # Flatpak is not in the default linux.target list because building it
+    # requires `flatpak` and `flatpak-builder` on the host — trigger builds
+    # explicitly via `npm run build:linux:flatpak`.
+    runtime: org.freedesktop.Platform
+    runtimeVersion: '25.08'
+    sdk: org.freedesktop.Sdk
+    base: org.electronjs.Electron2.BaseApp
+    baseVersion: '25.08'
+    useWaylandFlags: true
+    category: Utility
+    finishArgs:
+        # --- Defaults matching electron-builder's built-in Flatpak config ---
+        - --socket=wayland
+        - --socket=x11
+        - --share=ipc
+        - --device=dri
+        - --socket=pulseaudio
+        - --filesystem=home
+        - --share=network
+        - --talk-name=org.freedesktop.Notifications
+        # --- solidtime-specific additions ---
+        # KWin activity backend (KDE Plasma Wayland): the persistent KWin script
+        # is loaded via org.kde.KWin.Scripting and calls back into a DBus service
+        # exported by this process (see src/main/activity/kwinBackend.ts).
+        - --talk-name=org.kde.KWin
+        - --own-name=io.solidtime.desktop.ActivityTracker
+        # System tray icon via SNI / libappindicator — KDE and GNOME
+        # implementations both expose these well-known names.
+        - --talk-name=org.kde.StatusNotifierWatcher
+        - --talk-name=com.canonical.AppMenu.Registrar
+        - --talk-name=org.freedesktop.portal.Desktop
 deb:
     depends:
         - libgtk-3-0
