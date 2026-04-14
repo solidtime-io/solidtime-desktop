@@ -23,6 +23,22 @@ export interface WindowActivityStats {
     count: number
 }
 
+export interface XWinExtensionStatus {
+    applicable: boolean
+    currentDesktop: string
+    sessionType: string
+    installed: boolean
+    enabled: boolean
+    ready: boolean
+    error?: string
+}
+
+export interface XWinExtensionActionResult {
+    success: boolean
+    status: XWinExtensionStatus
+    error?: string
+}
+
 export interface IElectronAPI {
     loadPreferences: () => Promise<void>
     showMainWindow: () => void
@@ -48,6 +64,7 @@ export interface IElectronAPI {
     onIdleDialogResponse: (
         callback: (data: { choice: number; idleStartTime: string; idleEndTime: string }) => void
     ) => () => void // Returns cleanup function to remove listener
+    getActivityTrackingSupport: () => Promise<{ supported: boolean; reason?: string }>
     getSettings: () => Promise<{ success: boolean; data?: AppSettings; error?: string }>
     updateSettings: (
         settings: Partial<AppSettings>
@@ -69,6 +86,9 @@ export interface IElectronAPI {
         startDate: string,
         endDate: string
     ) => Promise<{ success: boolean; error?: string }>
+    getXWinExtensionStatus: () => Promise<XWinExtensionStatus>
+    installXWinExtension: () => Promise<XWinExtensionActionResult>
+    enableXWinExtension: () => Promise<XWinExtensionActionResult>
 }
 
 declare global {

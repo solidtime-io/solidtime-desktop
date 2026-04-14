@@ -15,6 +15,8 @@ import { registerSettingsListeners } from './settings'
 import { initializeActivityTracker, stopActivityTracking } from './activityTracker'
 import { registerWindowActivitiesHandlers } from './windowActivities'
 import { registerAppIconHandlers } from './appIcons'
+import { registerXWinExtensionHandlers } from './xWinExtension'
+import { getActivityTrackingSupport } from './activityTrackingSupport'
 import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 import { stopIdleMonitoring } from './idleMonitor'
@@ -146,6 +148,10 @@ app.whenReady().then(async () => {
     registerSettingsListeners()
     registerWindowActivitiesHandlers()
     registerAppIconHandlers()
+    registerXWinExtensionHandlers()
+
+    // Activity tracking platform support check
+    ipcMain.handle('getActivityTrackingSupport', () => getActivityTrackingSupport())
 
     // Screen recording permission handlers
     ipcMain.handle('checkScreenRecordingPermission', async () => {

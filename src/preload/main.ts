@@ -52,6 +52,7 @@ if (process.contextIsolated || true) {
                 // Return cleanup function to remove the listener
                 return () => ipcRenderer.removeListener('idleDialogResponse', listener)
             },
+            getActivityTrackingSupport: () => ipcRenderer.invoke('getActivityTrackingSupport'),
             getSettings: () => ipcRenderer.invoke('getSettings'),
             updateSettings: (settings) => ipcRenderer.invoke('updateSettings', settings),
             checkScreenRecordingPermission: () =>
@@ -64,6 +65,9 @@ if (process.contextIsolated || true) {
                 ipcRenderer.invoke('deleteWindowActivitiesInRange', startDate, endDate),
             deleteActivityPeriodsInRange: (startDate: string, endDate: string) =>
                 ipcRenderer.invoke('deleteActivityPeriodsInRange', startDate, endDate),
+            getXWinExtensionStatus: () => ipcRenderer.invoke('getXWinExtensionStatus'),
+            installXWinExtension: () => ipcRenderer.invoke('installXWinExtension'),
+            enableXWinExtension: () => ipcRenderer.invoke('enableXWinExtension'),
         })
     } catch (error) {
         console.error(error)

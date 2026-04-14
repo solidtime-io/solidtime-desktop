@@ -33,6 +33,16 @@ import { useRouter } from 'vue-router'
 import { dayjs } from '../utils/dayjs.ts'
 import { EllipsisVerticalIcon } from '@heroicons/vue/24/outline'
 
+type LinuxXWinExtensionStatus = {
+    applicable: boolean
+    currentDesktop: string
+    sessionType: string
+    installed: boolean
+    enabled: boolean
+    ready: boolean
+    error?: string
+}
+
 const router = useRouter()
 const queryClient = useQueryClient()
 
@@ -50,10 +60,23 @@ const showPermissionModal = ref(false)
 const showManualInstructionsModal = ref(false)
 const showGrantPermissionButton = ref(false)
 const hasPermission = ref(false)
+const activityTrackingSupported = ref(true)
+const activityTrackingUnsupportedReason = ref('')
 const showDeleteWindowActivitiesModal = ref(false)
 const showDeleteActivityPeriodsModal = ref(false)
 const showDeleteIconCacheModal = ref(false)
+const xWinExtensionStatus = ref<LinuxXWinExtensionStatus | null>(null)
+const xWinStatusLoading = ref(false)
+const xWinActionLoading = ref<'install' | 'enable' | null>(null)
+const xWinActionError = ref<string | null>(null)
+const xWinActionMessage = ref<string | null>(null)
 const myData = computed(() => data.value?.data)
+const activityTrackingToggleDisabled = computed(
+    () => !activityTrackingSupported.value && !activityTrackingEnabled.value
+)
+const xWinExtensionNeedsSetup = computed(
+    () => xWinExtensionStatus.value?.applicable && !xWinExtensionStatus.value.ready
+)
 
 const { mutate: deleteAllWindowActivities, isPending: isDeletingWindowActivities } =
     useDeleteAllWindowActivitiesMutation()
@@ -185,6 +208,57 @@ function closeManualInstructions() {
 function reopenPermissionModal() {
     showPermissionModal.value = true
 }
+
+async function refreshXWinExtensionStatus() {
+    xWinStatusLoading.value = true
+
+    try {
+        xWinExtensionStatus.value = await window.electronAPI.getXWinExtensionStatus()
+    } finally {
+        xWinStatusLoading.value = false
+    }
+}
+
+async function installXWinExtension() {
+    xWinActionLoading.value = 'install'
+    xWinActionError.value = null
+    xWinActionMessage.value = null
+
+    try {
+        const result = await window.electronAPI.installXWinExtension()
+        xWinExtensionStatus.value = result.status
+
+        if (result.success) {
+            xWinActionMessage.value =
+                'Extension installed. Log out and sign back in to load it, then return here and click Enable Extension.'
+        } else {
+            xWinActionError.value = result.error ?? 'Failed to install the x-win GNOME extension.'
+        }
+    } finally {
+        xWinActionLoading.value = null
+    }
+}
+
+async function enableXWinExtension() {
+    xWinActionLoading.value = 'enable'
+    xWinActionError.value = null
+    xWinActionMessage.value = null
+
+    try {
+        const result = await window.electronAPI.enableXWinExtension()
+        xWinExtensionStatus.value = result.status
+
+        if (result.success) {
+            xWinActionMessage.value =
+                'Extension enabled. GNOME Wayland activity tracking should now work.'
+        } else {
+            xWinActionError.value = result.error ?? 'Failed to enable the x-win GNOME extension.'
+        }
+    } finally {
+        xWinActionLoading.value = null
+    }
+}
+
 function confirmDeleteWindowActivities() {
     deleteAllWindowActivities(undefined, {
         onSettled: () => (showDeleteWindowActivitiesModal.value = false),
@@ -204,9 +278,21 @@ function confirmDeleteIconCache() {
 }
 
 onMounted(async () => {
+    // Check platform support for activity tracking
+    const support = await window.electronAPI.getActivityTrackingSupport()
+    activityTrackingSupported.value = support.supported
+    if (!support.supported) {
+        activityTrackingUnsupportedReason.value =
+            support.reason || 'Activity tracking is not supported on this platform.'
+    }
+
     // Check permission status on mount
     if (activityTrackingEnabled.value) {
         hasPermission.value = await window.electronAPI.checkScreenRecordingPermission()
+    }
+
+    if (activityTrackingSupported.value) {
+        await refreshXWinExtensionStatus()
     }
 
     window.electronAPI.onUpdateAvailable(() => {
@@ -250,7 +336,11 @@ watch(idleThresholdMinutes, (minutes) => {
 
 // Watch for activity tracking setting changes and notify main process
 watch(activityTrackingEnabled, (enabled) => {
-    handleActivityTrackingToggle(enabled)
+    if (!activityTrackingSupported.value && enabled) return
+    void handleActivityTrackingToggle(enabled)
+    if (enabled && activityTrackingSupported.value) {
+        void refreshXWinExtensionStatus()
+    }
 })
 </script>
 
@@ -307,16 +397,119 @@ watch(activityTrackingEnabled, (enabled) => {
                             max="60"
                             class="w-20 px-2 py-1 text-sm bg-card-background border border-card-background-separator rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
-                    <label class="flex items-center">
+                    <label
+                        class="flex items-center"
+                        :class="{ 'opacity-50': activityTrackingToggleDisabled }">
                         <Checkbox
                             v-model:checked="activityTrackingEnabled"
+                            :disabled="activityTrackingToggleDisabled"
                             name="activityTracking" />
                         <span class="ms-2 text-sm">Enable Window Activity Tracking</span>
                     </label>
-                    <div v-if="activityTrackingEnabled" class="ml-6 space-y-2">
+                    <div v-if="!activityTrackingSupported" class="ml-6">
+                        <p class="text-xs text-yellow-600">
+                            {{ activityTrackingUnsupportedReason }}
+                        </p>
+                    </div>
+                    <div
+                        v-if="activityTrackingEnabled && activityTrackingSupported"
+                        class="ml-6 space-y-2">
                         <div class="text-xs text-muted-foreground">
                             Tracks the active window and application to show detailed activity in
                             the calendar.
+                        </div>
+                        <div
+                            v-if="xWinExtensionStatus?.applicable"
+                            class="space-y-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+                            <div class="text-xs font-medium text-yellow-200">
+                                GNOME Wayland detected
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Some Wayland setups already work without extra steps. On GNOME
+                                Wayland, <code>x-win</code> relies on its GNOME extension for
+                                reliable window activity tracking.
+                            </p>
+                            <p
+                                v-if="xWinExtensionStatus.ready"
+                                class="text-xs font-medium text-green-400">
+                                The extension is installed and enabled. No further setup is needed.
+                            </p>
+                            <p
+                                v-else-if="!xWinExtensionStatus.installed"
+                                class="text-xs font-medium text-yellow-200">
+                                The extension is not installed yet.
+                            </p>
+                            <p v-else class="text-xs font-medium text-yellow-200">
+                                The extension is installed but not enabled yet. If you just
+                                installed it, log out of your GNOME session and sign back in first
+                                so the extension is loaded.
+                            </p>
+                            <div class="text-[11px] text-muted-foreground">
+                                Desktop: <strong>{{ xWinExtensionStatus.currentDesktop }}</strong>
+                                <span class="mx-1">•</span>
+                                Session: <strong>{{ xWinExtensionStatus.sessionType }}</strong>
+                            </div>
+                            <div v-if="xWinExtensionStatus.error" class="text-xs text-red-400">
+                                {{ xWinExtensionStatus.error }}
+                            </div>
+                            <div v-if="xWinActionError" class="text-xs text-red-400">
+                                {{ xWinActionError }}
+                            </div>
+                            <div v-if="xWinActionMessage" class="text-xs text-green-400">
+                                {{ xWinActionMessage }}
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <SecondaryButton
+                                    class="text-xs py-1 px-2"
+                                    :disabled="xWinStatusLoading || xWinActionLoading !== null"
+                                    @click="refreshXWinExtensionStatus">
+                                    {{ xWinStatusLoading ? 'Refreshing...' : 'Refresh Status' }}
+                                </SecondaryButton>
+                                <PrimaryButton
+                                    v-if="!xWinExtensionStatus.installed"
+                                    class="text-xs py-1 px-2"
+                                    :disabled="xWinActionLoading !== null"
+                                    @click="installXWinExtension">
+                                    <div class="flex items-center">
+                                        <LoadingSpinner
+                                            v-if="xWinActionLoading === 'install'"></LoadingSpinner>
+                                        <span>
+                                            {{
+                                                xWinActionLoading === 'install'
+                                                    ? 'Installing...'
+                                                    : 'Install Extension'
+                                            }}
+                                        </span>
+                                    </div>
+                                </PrimaryButton>
+                                <PrimaryButton
+                                    v-else-if="!xWinExtensionStatus.enabled"
+                                    class="text-xs py-1 px-2"
+                                    :disabled="xWinActionLoading !== null"
+                                    @click="enableXWinExtension">
+                                    <div class="flex items-center">
+                                        <LoadingSpinner
+                                            v-if="xWinActionLoading === 'enable'"></LoadingSpinner>
+                                        <span>
+                                            {{
+                                                xWinActionLoading === 'enable'
+                                                    ? 'Enabling...'
+                                                    : 'Enable Extension'
+                                            }}
+                                        </span>
+                                    </div>
+                                </PrimaryButton>
+                            </div>
+                            <p
+                                v-if="xWinExtensionNeedsSetup"
+                                class="text-[11px] text-muted-foreground">
+                                After installing the extension, log out and sign back in to your
+                                GNOME session. Then reopen solidtime and enable the extension here.
+                            </p>
+                            <p v-if="xWinExtensionNeedsSetup" class="text-xs text-yellow-200">
+                                Activity tracking is enabled, but GNOME Wayland will not report the
+                                focused window until this extension is ready.
+                            </p>
                         </div>
                         <div v-if="!hasPermission && activityTrackingEnabled" class="space-y-2">
                             <p class="text-xs text-yellow-600">
