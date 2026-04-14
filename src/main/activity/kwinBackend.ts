@@ -9,6 +9,7 @@ import {
     type WindowChangeHandler,
     type WindowInfo,
 } from './backend'
+import { resolveLinuxAppDisplayName } from './linuxAppName'
 import type {
     DBusCallMessage,
     DBusMessageBus,
@@ -89,6 +90,7 @@ type ProcMeta = {
     comm?: string
     exePath?: string
     rssBytes?: number
+    displayName?: string
 }
 
 type KWinWindowEvent = {
@@ -113,7 +115,12 @@ function buildWindowInfo(event: KWinWindowEvent, meta: ProcMeta = {}): WindowInf
         title: event.caption,
         info: {
             execName: meta.comm ?? event.resourceName ?? event.resourceClass ?? '',
-            name: event.resourceClass || meta.comm || event.resourceName || 'Unknown',
+            name:
+                meta.displayName ||
+                event.resourceClass ||
+                meta.comm ||
+                event.resourceName ||
+                'Unknown',
             path: meta.exePath ?? '',
             processId: event.pid,
         },
@@ -128,6 +135,21 @@ function buildWindowInfo(event: KWinWindowEvent, meta: ProcMeta = {}): WindowInf
         usage: {
             memory: meta.rssBytes ?? 0,
         },
+    }
+}
+
+async function enrichWindowMeta(event: KWinWindowEvent): Promise<ProcMeta> {
+    const meta = await enrichFromProc(event.pid)
+    const displayName = await resolveLinuxAppDisplayName({
+        resourceClass: event.resourceClass,
+        resourceName: event.resourceName,
+        comm: meta.comm,
+        exePath: meta.exePath,
+    })
+
+    return {
+        ...meta,
+        displayName,
     }
 }
 
@@ -163,8 +185,8 @@ function buildWindowInfo(event: KWinWindowEvent, meta: ProcMeta = {}): WindowInf
  * /proc enrichment (used to fill in execName/path/memory) will partially
  * degrade under Flatpak — `readlink /proc/<pid>/exe` points at host paths
  * that the sandbox view of the filesystem may reject. The enrichment code
- * catches these failures silently and falls back to KWin's own resourceName
- * / resourceClass, so tracking still works.
+ * catches these failures silently and falls back to KWin's own identifiers
+ * when it cannot resolve a desktop-entry display name, so tracking still works.
  */
 export class KWinBackend implements ActivityBackend {
     private dbusModule: DBusModule | null = null
@@ -569,10 +591,10 @@ export function buildInterfaceClass(dbusModule: DBusModule): any {
             // asynchronous. Activity tracking uses delivery order to close and
             // open activity intervals, so later focus changes must never overtake
             // earlier ones just because their metadata lookup finished first.
-            enrichFromProc(pid)
+            enrichWindowMeta(event)
                 .then((meta) => buildWindowInfo(event, meta))
                 .catch((err) => {
-                    logger.error('Failed to enrich window info from /proc:', err)
+                    logger.error('Failed to enrich KWin window metadata:', err)
                     return buildWindowInfo(event)
                 })
                 .then((info) => {

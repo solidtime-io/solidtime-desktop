@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 
 // Mock electron's app module before any imports that use it
 vi.mock('electron', () => ({
@@ -21,11 +21,46 @@ vi.mock('../../logger', () => ({
 vi.mock('fs/promises', () => ({
     readFile: vi.fn(),
     readlink: vi.fn(),
+    readdir: vi.fn(),
 }))
 
-import { readFile, readlink } from 'fs/promises'
+import type { Dirent } from 'fs'
+import { readFile, readlink, readdir } from 'fs/promises'
 import { enrichFromProc, buildInterfaceClass, KWinBackend } from '../kwinBackend'
 import type { WindowInfo } from '../backend'
+import { resetLinuxAppNameResolverForTests } from '../linuxAppName'
+
+type ReaddirWithFileTypes = (path: string) => Promise<Dirent[]>
+
+const readdirWithFileTypesMock = vi.mocked(readdir) as unknown as MockInstance<ReaddirWithFileTypes>
+
+function createDirent(name: string): Dirent {
+    return {
+        name,
+        parentPath: '',
+        path: '',
+        isFile: () => true,
+        isDirectory: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isSymbolicLink: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+    } as Dirent
+}
+
+beforeEach(() => {
+    vi.clearAllMocks()
+    resetLinuxAppNameResolverForTests()
+    vi.stubEnv('HOME', '/home/tester')
+    vi.stubEnv('XDG_DATA_HOME', '/home/tester/.local/share')
+    vi.stubEnv('XDG_DATA_DIRS', '/usr/local/share:/usr/share')
+    readdirWithFileTypesMock.mockResolvedValue([])
+})
+
+afterEach(() => {
+    vi.unstubAllEnvs()
+})
 
 // ─── enrichFromProc ──────────────────────────────────────────────────────────
 
@@ -128,11 +163,19 @@ describe('buildInterfaceClass', () => {
     })
 
     it('NotifyActiveWindow invokes handler with correct WindowInfo shape', async () => {
+        const applicationsDir = '/home/tester/.local/share/applications'
+        readdirWithFileTypesMock.mockImplementation(async (dir) =>
+            String(dir) === applicationsDir ? [createDirent('firefox.desktop')] : []
+        )
+
         // Mock enrichFromProc by mocking fs/promises to return known values
         vi.mocked(readFile).mockImplementation(async (path) => {
             const p = String(path)
             if (p.endsWith('/comm')) return 'firefox\n'
             if (p.endsWith('/statm')) return '100 50 30 10 0 20 0'
+            if (p === `${applicationsDir}/firefox.desktop`) {
+                return ['[Desktop Entry]', 'Name=Mozilla Firefox', 'Exec=firefox %u'].join('\n')
+            }
             throw new Error('not found')
         })
         vi.mocked(readlink).mockResolvedValue('/usr/bin/firefox')
@@ -165,7 +208,7 @@ describe('buildInterfaceClass', () => {
         expect(info.title).toBe('GitHub - Mozilla Firefox')
         expect(info.os).toBe('linux')
         expect(info.info.processId).toBe(1234)
-        expect(info.info.name).toBe('firefox') // resourceClass takes priority
+        expect(info.info.name).toBe('Mozilla Firefox')
         expect(info.info.execName).toBe('firefox') // comm from /proc
         expect(info.info.path).toBe('/usr/bin/firefox')
         expect(info.position).toEqual({
@@ -204,7 +247,7 @@ describe('buildInterfaceClass', () => {
 
         const info = received[0]
         expect(info.info.execName).toBe('konsole') // falls back to resourceName
-        expect(info.info.name).toBe('org.kde.konsole') // resourceClass
+        expect(info.info.name).toBe('Konsole')
         expect(info.position.isFullScreen).toBe(false)
         expect(info.windowKey).toBe('uuid')
     })
@@ -229,7 +272,7 @@ describe('buildInterfaceClass', () => {
         await vi.waitFor(() => expect(received).toHaveLength(1))
 
         // When resourceClass is empty, falls back to comm
-        expect(received[0].info.name).toBe('myapp')
+        expect(received[0].info.name).toBe('Myapp')
     })
 
     it('delivers window events in the original KWin order even when enrichment resolves out of order', async () => {

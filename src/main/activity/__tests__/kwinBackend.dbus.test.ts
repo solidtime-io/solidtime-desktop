@@ -51,6 +51,7 @@ vi.mock('fs', async () => {
 vi.mock('fs/promises', () => ({
     readFile: vi.fn().mockRejectedValue(new Error('ENOENT')),
     readlink: vi.fn().mockRejectedValue(new Error('ENOENT')),
+    readdir: vi.fn().mockResolvedValue([]),
 }))
 
 describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {
@@ -90,7 +91,7 @@ describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {
         x: number,
         y: number,
         width: number,
-        height: number,
+        height: number
     ): Promise<void> {
         if (!callerBus) {
             callerBus = dbusModule.sessionBus()
@@ -152,7 +153,7 @@ describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {
             expect(info.windowKey).toBe('test-uuid')
             expect(info.title).toBe('Test Window - Firefox')
             expect(info.info.processId).toBe(12345)
-            expect(info.info.name).toBe('firefox')
+            expect(info.info.name).toBe('Firefox')
             expect(info.os).toBe('linux')
             expect(info.position.x).toBe(10)
             expect(info.position.y).toBe(20)
