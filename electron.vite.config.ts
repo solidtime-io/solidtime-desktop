@@ -5,6 +5,11 @@ import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 
 const isProduction = process.env.NODE_ENV === 'production'
+const hasSentryAuthToken = Boolean(process.env.SENTRY_AUTH_TOKEN)
+const shouldUploadSourcemaps =
+    isProduction &&
+    hasSentryAuthToken &&
+    (process.env.CI === 'true' || process.env.SENTRY_UPLOAD === 'true')
 
 // Set SOLIDTIME_DIR to point at your local solidtime repo to use local packages during development.
 // Example: SOLIDTIME_DIR=../solidtime npm run dev
@@ -53,35 +58,28 @@ function getLocalPackageAliases(): { find: string | RegExp; replacement: string 
 
 const localAliases = getLocalPackageAliases()
 
+function getSentryPlugins() {
+    if (!shouldUploadSourcemaps) return []
+
+    return [
+        sentryVitePlugin({
+            org: 'solidtime',
+            project: 'desktop',
+        }),
+    ]
+}
+
 export default defineConfig({
     main: {
         build: {
             sourcemap: true,
             externalizeDeps: true,
         },
-        plugins: [
-            ...(isProduction
-                ? [
-                      sentryVitePlugin({
-                          org: 'solidtime',
-                          project: 'desktop',
-                      }),
-                  ]
-                : []),
-        ],
+        plugins: getSentryPlugins(),
     },
 
     preload: {
-        plugins: [
-            ...(isProduction
-                ? [
-                      sentryVitePlugin({
-                          org: 'solidtime',
-                          project: 'desktop',
-                      }),
-                  ]
-                : []),
-        ],
+        plugins: getSentryPlugins(),
         build: {
             sourcemap: true,
             externalizeDeps: true,
@@ -112,16 +110,6 @@ export default defineConfig({
             ],
             dedupe: ['vue'],
         },
-        plugins: [
-            vue(),
-            ...(isProduction
-                ? [
-                      sentryVitePlugin({
-                          org: 'solidtime',
-                          project: 'desktop',
-                      }),
-                  ]
-                : []),
-        ],
+        plugins: [vue(), ...getSentryPlugins()],
     },
 })
