@@ -17,9 +17,7 @@ jobs:
                   node-version: '22.x'
 
             - name: 'Install npm dependencies'
-              run: |
-                  npm ci
-                  npm install @rollup/rollup-linux-x64-gnu --no-save
+              run: npm ci
 
             - name: 'Run type check'
               run: npm run typecheck
