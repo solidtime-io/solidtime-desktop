@@ -1,6 +1,7 @@
 import { ipcMain, app, net } from 'electron'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { resolveLinuxAppIconDataUrl } from './activity/linuxAppIcon'
 
 // Lazy-load x-win module with detailed error reporting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,6 +137,14 @@ export async function getAppIcon(appName: string): Promise<string | null> {
  * Fetch icon for a specific app by finding its window
  */
 async function fetchIconForApp(appName: string): Promise<string | null> {
+    if (process.platform === 'linux') {
+        const dataUrl = await resolveLinuxAppIconDataUrl(appName)
+        if (dataUrl) {
+            await saveIconToCache(appName, dataUrl)
+            return dataUrl
+        }
+    }
+
     try {
         const xWin = await loadXWinModule()
         const windows = await xWin.openWindowsAsync()
@@ -185,6 +194,25 @@ async function getAppIcons(appNames: string[]): Promise<Record<string, string | 
         return icons
     }
 
+    // On Linux, try desktop-entry lookup before the x-win window scan so we can
+    // resolve icons for apps that aren't currently running and for windows that
+    // x-win can't see on KDE Wayland.
+    if (process.platform === 'linux') {
+        await Promise.all(
+            appsNeedingFetch.map(async (appName) => {
+                const dataUrl = await resolveLinuxAppIconDataUrl(appName)
+                if (!dataUrl) return
+                await saveIconToCache(appName, dataUrl)
+                icons[appName] = dataUrl
+            })
+        )
+    }
+
+    const remaining = appsNeedingFetch.filter((appName) => !(appName in icons))
+    if (remaining.length === 0) {
+        return icons
+    }
+
     // Fetch all open windows once for all uncached apps
     try {
         const xWin = await loadXWinModule()
@@ -192,7 +220,7 @@ async function getAppIcons(appNames: string[]): Promise<Record<string, string | 
 
         // Process each app that needs fetching
         await Promise.all(
-            appsNeedingFetch.map(async (appName) => {
+            remaining.map(async (appName) => {
                 const matchingWindow = windows.find(
                     (win) => win.info.name === appName || win.info.execName === appName
                 )
@@ -219,7 +247,7 @@ async function getAppIcons(appNames: string[]): Promise<Record<string, string | 
     } catch (error) {
         console.error('Failed to fetch open windows for icons:', error)
         // Fill remaining with null
-        appsNeedingFetch.forEach((appName) => {
+        remaining.forEach((appName) => {
             if (!(appName in icons)) {
                 icons[appName] = null
             }

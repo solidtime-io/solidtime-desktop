@@ -52,6 +52,8 @@ vi.mock('fs/promises', () => ({
     readFile: vi.fn().mockRejectedValue(new Error('ENOENT')),
     readlink: vi.fn().mockRejectedValue(new Error('ENOENT')),
     readdir: vi.fn().mockResolvedValue([]),
+    access: vi.fn().mockRejectedValue(new Error('ENOENT')),
+    realpath: vi.fn().mockImplementation(async (p) => String(p)),
 }))
 
 describe.skipIf(!hasDbusSession)('KWinBackend DBus integration', () => {

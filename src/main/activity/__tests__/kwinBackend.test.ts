@@ -22,6 +22,8 @@ vi.mock('fs/promises', () => ({
     readFile: vi.fn(),
     readlink: vi.fn(),
     readdir: vi.fn(),
+    access: vi.fn().mockRejectedValue(new Error('ENOENT')),
+    realpath: vi.fn().mockImplementation(async (p) => String(p)),
 }))
 
 import type { Dirent } from 'fs'
