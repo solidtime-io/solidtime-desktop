@@ -10,7 +10,14 @@ import {
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@solidtime/ui'
+import { themeSetting } from '../utils/theme.ts'
+import { usePreferredColorScheme } from '@vueuse/core'
 import { logout } from '../utils/oauth.ts'
 import {
     isWidgetActivated,
@@ -45,6 +52,7 @@ type LinuxXWinExtensionStatus = {
 
 const router = useRouter()
 const queryClient = useQueryClient()
+const preferredColor = usePreferredColorScheme()
 
 const { data } = useQuery({
     queryKey: ['me'],
@@ -375,6 +383,22 @@ watch(activityTrackingEnabled, (enabled) => {
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Preferences</div>
                 <div class="space-y-4">
+                    <div class="flex flex-col space-y-1">
+                        <label for="theme" class="text-sm">Theme</label>
+                        <Select id="theme" v-model="themeSetting">
+                            <SelectTrigger class="w-48">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="system">System</SelectItem>
+                                <SelectItem value="light">Light</SelectItem>
+                                <SelectItem value="dark">Dark</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <span v-if="themeSetting === 'system'" class="text-xs text-muted">
+                            System default: {{ preferredColor }}
+                        </span>
+                    </div>
                     <label class="flex items-center">
                         <Checkbox v-model:checked="isWidgetActivated" name="remember" />
                         <span class="ms-2 text-sm">Show Timetracker Widget</span>
