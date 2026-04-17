@@ -307,7 +307,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
         <div
             v-if="timeEntries && projects && tasks && tags && clients"
             class="flex flex-col h-full">
-            <div class="flex bg-primary dark:bg-background">
+            <div class="flex bg-primary">
                 <div class="pl-4 pb-4 pt-4 border-b border-border-primary z-10 w-full top-0 left-0">
                     <CardTitle title="Time Tracker" :icon="ClockIcon as Component"></CardTitle>
                     <div class="relative pt-1.5">

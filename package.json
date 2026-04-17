@@ -48,7 +48,7 @@
         "@sentry/electron": "^7.11.0",
         "@sentry/vite-plugin": "^5.2.0",
         "@solidtime/api": "^0.0.6",
-        "@solidtime/ui": "^0.0.20",
+        "@solidtime/ui": "^0.0.21",
         "better-sqlite3": "^12.9.0",
         "dbus-next": "^0.10.2",
         "drizzle-orm": "^0.45.2",
