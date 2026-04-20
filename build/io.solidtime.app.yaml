@@ -18,6 +18,17 @@ finish-args:
     - --socket=pulseaudio
     - --share=network
     - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+    # System tray
+    - --talk-name=org.kde.StatusNotifierWatcher
+    # Notifications
+    - --talk-name=org.freedesktop.Notifications
+    # Window activity tracking for GNOME
+    - --talk-name=org.gnome.Shell
+    - --talk-name=org.gnome.Shell.Extensions
+    # Window activity tracking for KDE
+    - --talk-name=org.kde.KWin
+    - --talk-name=org.freedesktop.DBus
+    - --own-name=io.solidtime.desktop.ActivityTracker
 build-options:
     append-path: /usr/lib/sdk/node24/bin
     env:
