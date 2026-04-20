@@ -2,7 +2,7 @@
 Type=Application
 Name=Solidtime
 Comment=Time tracking app
-Exec=run.sh
+Exec=run.sh %u
 Icon=io.solidtime.app
 Terminal=false
 Categories=Utility;
