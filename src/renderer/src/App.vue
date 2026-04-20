@@ -155,7 +155,7 @@ whenever(cmdComma, () => {
     <div class="flex h-screen">
         <div class="flex-1 flex flex-col">
             <div
-                class="h-10 w-full bg-background border-b border-border-primary flex items-center"
+                class="h-10 w-full bg-background dark:bg-primary border-b border-border-primary flex items-center"
                 :class="isMac ? 'justify-end pr-3' : 'justify-start pl-3'">
                 <div
                     v-if="isMac"
