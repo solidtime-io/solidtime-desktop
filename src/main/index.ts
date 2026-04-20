@@ -53,7 +53,6 @@ if (!isE2ETesting()) {
     const gotTheLock = app.requestSingleInstanceLock()
     if (!gotTheLock) {
         app.quit()
-        process.exit(0)
     }
 }
 
