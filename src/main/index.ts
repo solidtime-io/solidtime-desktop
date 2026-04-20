@@ -229,7 +229,8 @@ app.on('before-quit', (event) => {
         })
         .finally(() => {
             saveCompleted = true
-            app.quit()
+            // Let the prevented before-quit attempt unwind before resuming quit.
+            setImmediate(() => app.quit())
         })
 })
 
