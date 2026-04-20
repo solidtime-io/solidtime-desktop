@@ -51,6 +51,7 @@ type LinuxXWinExtensionStatus = {
 }
 
 const router = useRouter()
+const isFlatpak = window.electronAPI.isFlatpak
 const queryClient = useQueryClient()
 const preferredColor = usePreferredColorScheme()
 
@@ -551,6 +552,7 @@ watch(activityTrackingEnabled, (enabled) => {
             </div>
 
             <div
+                v-if="!isFlatpak"
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div class="flex items-center space-x-4">
