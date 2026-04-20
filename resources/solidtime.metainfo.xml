@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>io.solidtime.app</id>
+  <name>Solidtime</name>
+  <summary>Modern open-source time tracking application for Freelancers and Agencies</summary>
+  <description>
+    <p>Time tracking: Track your time with a modern and easy-to-use interface</p>
+    <p>Projects: Create and manage projects and assign project members</p>
+    <p>Tasks: Create and manage tasks and assign tasks to projects</p>
+    <p>Clients: Create and manage clients and assign clients to projects</p>
+    <p>Billable rates: Set billable rates for projects, project members, organization members and organizations</p>
+    <p>Multiple organizations: Create and manage multiple organizations with one account</p>
+    <p>Roles and permissions: Create and manage organizations</p>
+    <p>Import: Import your time tracking data from other time tracking applications (Supported: Toggl, Clockify, Timeentry CSV)</p>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0</project_license>
+  <developer_name>Solidtime</developer_name>
+  <launchable type="desktop-id">io.solidtime.app.desktop</launchable>
+  <url type="homepage">https://github.com/solidtime-io/solidtime-desktop</url>
+  <url type="bugtracker">https://github.com/solidtime-io/solidtime-desktop/issues</url>
+  <url type="vcs-browser">https://github.com/solidtime-io/solidtime-desktop</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Solidtime</caption>
+      <image>https://github.com/solidtime-io/solidtime/raw/main/docs/solidtime-banner.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.2.6" date="2026-04-20">
+      <description>
+        <p>Update for the 25.08 runtime.</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

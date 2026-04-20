@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Solidtime
+Comment=Time tracking app
+Exec=run.sh
+Icon=io.solidtime.app
+Terminal=false
+Categories=Utility;
+MimeType=x-scheme-handler/solidtime;
