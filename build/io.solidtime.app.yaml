@@ -23,8 +23,8 @@ finish-args:
     # Notifications
     - --talk-name=org.freedesktop.Notifications
     # Window activity tracking for GNOME
-    - --talk-name=org.gnome.Shell
     - --talk-name=org.gnome.Shell.Extensions
+    - --filesystem=~/.local/share/gnome-shell/extensions/x-win@miniben90.org:create
     # Window activity tracking for KDE
     - --talk-name=org.kde.KWin
     - --talk-name=org.freedesktop.DBus
