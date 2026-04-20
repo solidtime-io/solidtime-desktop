@@ -3,14 +3,16 @@ import { app, BrowserWindow } from 'electron'
 export function registerDeeplinkListeners(mainWindow: BrowserWindow) {
     // handle linux and windows deeplinks
     app.on('second-instance', (_, commandLine) => {
-        // Someone tried to run a second instance, we should focus our window.
         if (mainWindow) {
             if (mainWindow.isMinimized()) mainWindow.restore()
             mainWindow.show()
             mainWindow.focus()
         }
-        // the commandLine is array of strings in which last element is deep link url
-        mainWindow.webContents.send('openDeeplink', commandLine.pop())
+        // Search rather than pop() as zypak may append sandbox flags after the URL
+        const url = commandLine.find((arg) => arg.startsWith('solidtime://'))
+        if (url) {
+            mainWindow.webContents.send('openDeeplink', url)
+        }
     })
     // handle mac os deeplinks
     app.on('open-url', (_, url) => {

@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://github.com/flatpak/flatpak-builder/raw/refs/heads/main/data/flatpak-manifest.schema.json
+
+app-id: io.solidtime.app
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+sdk-extensions:
+    - org.freedesktop.Sdk.Extension.node24
+command: run.sh
+separate-locales: false
+finish-args:
+    - --share=ipc
+    - --device=dri
+    - --socket=wayland
+    - --socket=fallback-x11
+    - --socket=pulseaudio
+    - --share=network
+    - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+    # System tray
+    - --talk-name=org.kde.StatusNotifierWatcher
+    # Notifications
+    - --talk-name=org.freedesktop.Notifications
+    # Window activity tracking for GNOME
+    - --talk-name=org.gnome.Shell.Extensions
+    - --filesystem=~/.local/share/gnome-shell/extensions/x-win@miniben90.org:create
+    # Window activity tracking for KDE
+    - --talk-name=org.kde.KWin
+    - --talk-name=org.freedesktop.DBus
+    - --own-name=io.solidtime.desktop.ActivityTracker
+build-options:
+    append-path: /usr/lib/sdk/node24/bin
+    env:
+        NPM_CONFIG_LOGLEVEL: info
+modules:
+    - name: solidtime
+      buildsystem: simple
+      subdir: main
+      build-options:
+          env:
+              XDG_CACHE_HOME: /run/build/solidtime/flatpak-node/cache
+              npm_config_cache: /run/build/solidtime/flatpak-node/npm-cache
+              npm_config_offline: 'true'
+      build-commands:
+          # Install npm dependencies
+          - npm install --offline
+          # Build the app
+          - |
+              . ../flatpak-node/electron-builder-arch-args.sh
+              npm run build:linux -- $ELECTRON_BUILDER_ARCH_ARGS --dir
+          # Bundle app and dependencies
+          - cp -a dist/linux*unpacked /app/main
+          # Install app wrapper
+          - install -Dm755 -t /app/bin/ ../run.sh
+          # Install AppStream metadata
+          - install -Dm644 resources/solidtime.metainfo.xml /app/share/metainfo/io.solidtime.app.metainfo.xml
+          # Install desktop file and icon
+          - install -Dm644 resources/solidtime.desktop /app/share/applications/io.solidtime.app.desktop
+          - install -Dm644 resources/solidtime.svg /app/share/icons/hicolor/scalable/apps/io.solidtime.app.svg
+      sources:
+          # - type: archive
+          #   url: https://github.com/flathub/electron-sample-app/archive/1.0.1.tar.gz
+          #   sha256: a2feb3f1cf002a2e4e8900f718cc5c54db4ad174e48bfcfbddcd588c7b716d5b
+          #   dest: main
+          - type: dir
+            dest: main
+            path: ..
+          # Wrapper to launch the app
+          # Regenerate with flatpak-node-generator npm package-lock.json -o build/generated-sources.json
+          - generated-sources.json
+          - type: script
+            dest-filename: run.sh
+            commands:
+                - zypak-wrapper.sh /app/main/solidtime "$@"

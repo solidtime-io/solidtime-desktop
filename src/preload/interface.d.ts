@@ -89,6 +89,7 @@ export interface IElectronAPI {
     getXWinExtensionStatus: () => Promise<XWinExtensionStatus>
     installXWinExtension: () => Promise<XWinExtensionActionResult>
     enableXWinExtension: () => Promise<XWinExtensionActionResult>
+    isFlatpak: boolean
 }
 
 declare global {

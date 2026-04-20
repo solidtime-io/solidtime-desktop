@@ -68,6 +68,7 @@ if (process.contextIsolated || true) {
             getXWinExtensionStatus: () => ipcRenderer.invoke('getXWinExtensionStatus'),
             installXWinExtension: () => ipcRenderer.invoke('installXWinExtension'),
             enableXWinExtension: () => ipcRenderer.invoke('enableXWinExtension'),
+            isFlatpak: !!process.env.FLATPAK_ID,
         })
     } catch (error) {
         console.error(error)

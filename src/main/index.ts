@@ -21,7 +21,7 @@ import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 import { stopIdleMonitoring } from './idleMonitor'
 
-import { isE2ETesting } from './env'
+import { isE2ETesting, isFlatpak } from './env'
 
 // Global error handlers to capture full error details
 process.on('uncaughtException', (error) => {
@@ -56,20 +56,25 @@ if (!isE2ETesting()) {
     }
 }
 
-initializeAutoUpdater()
+if (!isFlatpak()) {
+    initializeAutoUpdater()
+}
 
 Sentry.init({
     dsn: 'https://cc0104f2ce88d4490bbde2750b6483c4@o4507102829543424.ingest.de.sentry.io/4507783414939728',
 })
 
-if (process.defaultApp) {
-    if (process.argv.length >= 2) {
-        app.setAsDefaultProtocolClient('solidtime', process.execPath, [
-            path.resolve(process.argv[1]),
-        ])
+// In Flatpak the protocol handler is registered via the .desktop file; skip runtime registration
+if (!isFlatpak()) {
+    if (process.defaultApp) {
+        if (process.argv.length >= 2) {
+            app.setAsDefaultProtocolClient('solidtime', process.execPath, [
+                path.resolve(process.argv[1]),
+            ])
+        }
+    } else {
+        app.setAsDefaultProtocolClient('solidtime')
     }
-} else {
-    app.setAsDefaultProtocolClient('solidtime')
 }
 
 function createWindow(): void {
@@ -77,7 +82,9 @@ function createWindow(): void {
     const mainWindow = initializeMainWindow(icon)
     registerMainWindowListeners(mainWindow)
     registerDeeplinkListeners(mainWindow)
-    registerAutoUpdateListeners(mainWindow)
+    if (!isFlatpak()) {
+        registerAutoUpdateListeners(mainWindow)
+    }
 
     const miniWindow = initializeMiniWindow(icon)
     registerMiniWindowListeners(miniWindow)
