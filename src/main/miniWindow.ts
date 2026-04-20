@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, autoUpdater as nativeAutoUpdater, BrowserWindow, ipcMain } from 'electron'
 import { isE2ETesting } from './env'
 
 export function initializeMiniWindow(icon: string) {
@@ -51,6 +51,9 @@ export function registerMiniWindowListeners(miniWindow: BrowserWindow) {
         }
     })
     app.on('before-quit', () => {
+        forcequit = true
+    })
+    nativeAutoUpdater.on('before-quit-for-update', () => {
         forcequit = true
     })
 }

@@ -202,37 +202,50 @@ app.on('window-all-closed', () => {
     }
 })
 
-// Save active periods before the app quits
-app.on('before-quit', async (event) => {
-    // Skip cleanup during E2E testing to avoid slow shutdown
+// Save active periods before quitting. Use app.quit() after the async save so
+// Squirrel.Mac can finish updater handoff; app.exit(0) bypasses it.
+let saveCompleted = false
+let saveInProgress = false
+
+app.on('before-quit', (event) => {
     if (isE2ETesting()) {
         return
     }
 
-    event?.preventDefault()
-
-    try {
-        console.log('App quitting - saving active periods...')
-
-        // Create a promise that rejects after 5 seconds
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Save operation timeout after 5 seconds')), 5000)
-        })
-
-        // Race the save operations against the timeout
-        const savePromise = Promise.all([stopActivityTracking(), stopIdleMonitoring()])
-
-        await Promise.race([savePromise, timeoutPromise])
-
-        console.log('Active periods saved successfully')
-    } catch (error) {
-        console.error('Error saving active periods on quit:', error)
-        // Continue with quit even if save fails
-    } finally {
-        // Now allow the app to quit
-        app.exit(0)
+    if (saveCompleted) {
+        return
     }
+
+    event.preventDefault()
+
+    if (saveInProgress) {
+        return
+    }
+    saveInProgress = true
+
+    saveActivePeriodsBeforeQuit()
+        .catch((error) => {
+            console.error('Error saving active periods on quit:', error)
+        })
+        .finally(() => {
+            saveCompleted = true
+            app.quit()
+        })
 })
+
+async function saveActivePeriodsBeforeQuit(): Promise<void> {
+    console.log('App quitting - saving active periods...')
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Save operation timeout after 5 seconds')), 5000)
+    })
+
+    const savePromise = Promise.all([stopActivityTracking(), stopIdleMonitoring()])
+
+    await Promise.race([savePromise, timeoutPromise])
+
+    console.log('Active periods saved successfully')
+}
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.

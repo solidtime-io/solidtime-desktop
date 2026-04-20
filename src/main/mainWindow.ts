@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, autoUpdater as nativeAutoUpdater, BrowserWindow, ipcMain, shell } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { isE2ETesting } from './env'
 
@@ -46,6 +46,9 @@ export function initializeMainWindow(icon: string) {
         }
     })
     app.on('before-quit', () => {
+        forcequit = true
+    })
+    nativeAutoUpdater.on('before-quit-for-update', () => {
         forcequit = true
     })
 
