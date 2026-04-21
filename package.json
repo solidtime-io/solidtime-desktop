@@ -109,6 +109,14 @@
         "@rollup/rollup-linux-arm64-gnu": "*",
         "@rollup/rollup-linux-x64-gnu": "*",
         "@rollup/rollup-win32-arm64-msvc": "*",
-        "@rollup/rollup-win32-x64-msvc": "*"
+        "@rollup/rollup-win32-x64-msvc": "*",
+        "@miniben90/x-win-darwin-arm64": "*",
+        "@miniben90/x-win-darwin-universal": "*",
+        "@miniben90/x-win-darwin-x64": "*",
+        "@miniben90/x-win-linux-x64-gnu": "*",
+        "@miniben90/x-win-linux-x64-musl": "*",
+        "@miniben90/x-win-win32-arm64-msvc": "*",
+        "@miniben90/x-win-win32-ia32-msvc": "*",
+        "@miniben90/x-win-win32-x64-msvc": "*"
     }
 }
