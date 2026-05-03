@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray, nativeTheme } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Tray, nativeTheme } from 'electron'
 import activeTrayIcon from '../../resources/solidtime_trayTemplate@4x.png?asset'
 import inactiveTrayIcon from '../../resources/solidtime_emptyTemplate@4x.png?asset'
 import activeTrayIconInverted from '../../resources/solidtime_trayTemplate_inverted@4x.png?asset'
@@ -22,6 +22,11 @@ function getIconPath(active: boolean) {
     // So we should always use the non-inverted version on macOS
     if (process.platform === 'darwin') {
         return active ? activeTrayIcon : inactiveTrayIcon
+    }
+
+    // On Linux, always use the inverted version as system trays are dark
+    if (process.platform === 'linux') {
+        return active ? activeTrayIconInverted : inactiveTrayIconInverted
     }
 
     // On other platforms, manually handle dark mode
@@ -74,14 +79,14 @@ function buildMenu(mainWindow: BrowserWindow, timeEntry: TimeEntry | null) {
 }
 
 export function initializeTray(mainWindow: Electron.BrowserWindow) {
-    const tray = new Tray(nativeImage.createFromPath(getIconPath(false)))
+    const tray = new Tray(getIconPath(false))
     tray.setToolTip('solidtime')
     tray.setTitle('')
     tray.setContextMenu(buildMenu(mainWindow, null))
 
     nativeTheme.on('updated', () => {
         const isRunning = isTimerRunning(currentTrayTimeEntry)
-        tray.setImage(nativeImage.createFromPath(getIconPath(isRunning)))
+        tray.setImage(getIconPath(isRunning))
     })
 
     return tray
@@ -104,7 +109,7 @@ export function registerTrayListeners(tray: Tray, mainWindow: BrowserWindow) {
             const timeEntry = JSON.parse(serializedTimeEntry) as TimeEntry
             currentTrayTimeEntry = timeEntry
             const isRunning = isTimerRunning(timeEntry)
-            tray.setImage(nativeImage.createFromPath(getIconPath(isRunning)))
+            tray.setImage(getIconPath(isRunning))
             tray.setToolTip(
                 isRunning ? 'solidtime - Timer is running' : 'solidtime - Timer is stopped'
             )
