@@ -154,6 +154,7 @@ function registerPowerMonitorEvents() {
     powerEventsRegistered = true
 
     powerMonitor.on('suspend', () => {
+        if (!idleDetectionEnabled) return
         console.log('powerMonitor: system suspend')
         // Stop the polling interval BEFORE transitioning to idle
         // to prevent a final tick from flipping state back to active
@@ -162,18 +163,21 @@ function registerPowerMonitorEvents() {
     })
 
     powerMonitor.on('lock-screen', () => {
+        if (!idleDetectionEnabled) return
         console.log('powerMonitor: screen locked')
         clearIdleCheckInterval()
         transitionToIdle(dayjs())
     })
 
     powerMonitor.on('resume', () => {
+        if (!idleDetectionEnabled) return
         console.log('powerMonitor: system resume')
         transitionToActive()
         restartIdleCheckInterval()
     })
 
     powerMonitor.on('unlock-screen', () => {
+        if (!idleDetectionEnabled) return
         console.log('powerMonitor: screen unlocked')
         transitionToActive()
         restartIdleCheckInterval()
