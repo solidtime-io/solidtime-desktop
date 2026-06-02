@@ -68,9 +68,12 @@ const { data: meResponse } = useQuery({
     queryFn: () => getMe(),
 })
 
+const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
+window.getTimezoneSetting = () => deviceTimezone
+
 watch(meResponse, () => {
     if (meResponse.value?.data) {
-        window.getTimezoneSetting = () => meResponse.value.data.timezone
         window.getWeekStartSetting = () => meResponse.value.data.week_start
     }
 })
@@ -83,7 +86,6 @@ watch(isActive, (active) => {
 })
 
 onMounted(async () => {
-    window.getTimezoneSetting = () => 'Europe/Vienna'
     window.getWeekStartSetting = () => 'monday'
 
     initializeAuth(queryClient)
