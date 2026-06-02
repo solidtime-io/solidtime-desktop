@@ -66,17 +66,16 @@ watchEffect(() => {
 const { data: meResponse } = useQuery({
     queryKey: ['me'],
     queryFn: () => getMe(),
+    enabled: isLoggedIn,
 })
 
 const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+window.getTimezoneSetting = () => meResponse.value?.data?.timezone || deviceTimezone
+window.getWeekStartSetting = () => meResponse.value?.data?.week_start || 'monday'
 
-window.getTimezoneSetting = () => deviceTimezone
-
-watch(meResponse, () => {
-    if (meResponse.value?.data) {
-        window.getWeekStartSetting = () => meResponse.value.data.week_start
-    }
-})
+// Time-formatting UI must not mount before the real timezone is loaded, or
+// <keep-alive> will cache it with the fallback for the whole session.
+const isMeLoaded = computed(() => !!meResponse.value?.data)
 
 // Watch timer state and notify main process for idle detection
 watch(isActive, (active) => {
@@ -86,8 +85,6 @@ watch(isActive, (active) => {
 })
 
 onMounted(async () => {
-    window.getWeekStartSetting = () => 'monday'
-
     initializeAuth(queryClient)
     useTheme()
 
@@ -169,7 +166,7 @@ whenever(cmdComma, () => {
                 </div>
                 <div v-if="!isMac" class="flex-1 h-full" style="-webkit-app-region: drag"></div>
             </div>
-            <div v-if="isLoggedIn" class="flex-1 flex flex-col overflow-hidden">
+            <div v-if="isLoggedIn && isMeLoaded" class="flex-1 flex flex-col overflow-hidden">
                 <div class="flex-1 flex overflow-hidden">
                     <SidebarNavigation />
                     <router-view v-slot="{ Component }">
@@ -193,6 +190,9 @@ whenever(cmdComma, () => {
                         </div>
                     </div>
                 </div>
+            </div>
+            <div v-else-if="isLoggedIn" class="flex-1 flex items-center justify-center">
+                <div class="text-text-tertiary font-medium text-sm">Loading…</div>
             </div>
             <div v-else class="flex-1">
                 <div class="flex flex-col space-y-6 py-12 items-center justify-center">
