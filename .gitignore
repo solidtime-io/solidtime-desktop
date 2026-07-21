@@ -1,8 +1,21 @@
 node_modules
 dist
+dist-ios
 out
 .DS_Store
 *.log*
+
+# Capacitor iOS build artifacts (web assets copied in by `cap sync`)
+ios/App/App/public
+ios/App/App/capacitor.config.json
+ios/App/Pods
+ios/App/App/Assets.xcassets/Splash.imageset/*.png
+ios/DerivedData
+
+# Xcode per-user state (window layout, breakpoints, signing selections)
+**/xcuserdata/
+**/*.xcuserstate
+ios/App/build
 
 # Sentry Config File
 .env.sentry-build-plugin

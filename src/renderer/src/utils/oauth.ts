@@ -1,9 +1,11 @@
 import { computed, ref } from 'vue'
 import { useStorage } from '@vueuse/core'
+import { Browser } from '@capacitor/browser'
 import { showMainWindow } from './window'
 import { currentMembershipId } from './myMemberships'
 import { type QueryClient } from '@tanstack/vue-query'
 import { emptyTimeEntry } from './timeEntries'
+import { isNativeMobile } from '../platform'
 
 const challenge = ref('')
 const state = ref('')
@@ -157,6 +159,10 @@ export async function initializeAuth(queryClient: QueryClient) {
                 useStorage('lastTimeEntry', { ...emptyTimeEntry }).value = null
                 accessToken.value = responseData.access_token
                 refreshToken.value = responseData.refresh_token
+                // Dismiss the in-app browser that handled the OAuth flow on iOS.
+                if (isNativeMobile()) {
+                    await Browser.close().catch(() => {})
+                }
                 showMainWindow()
             }
         }
@@ -174,5 +180,10 @@ export async function logout(queryClient: QueryClient) {
 }
 
 export async function openLoginWindow() {
+    if (isNativeMobile()) {
+        // Open an in-app Safari view; the solidtime:// redirect returns via deeplink.
+        await Browser.open({ url: loginUrl.value })
+        return
+    }
     await open(loginUrl.value)
 }

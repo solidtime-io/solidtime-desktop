@@ -19,6 +19,7 @@ import {
 import { themeSetting } from '../utils/theme.ts'
 import { usePreferredColorScheme } from '@vueuse/core'
 import { logout } from '../utils/oauth.ts'
+import { isNativeMobile } from '../platform'
 import {
     isWidgetActivated,
     isTrayTimerActivated,
@@ -58,6 +59,10 @@ const { data } = useQuery({
     queryKey: ['me'],
     queryFn: () => getMe(),
 })
+
+// Desktop-only features (tray, menu-bar widget, idle detection, in-app updates)
+// have no equivalent under the iOS sandbox and are hidden on native mobile.
+const isMobile = isNativeMobile()
 
 const showUpdateNotAvailable = ref(false)
 const checkingForUpdate = ref(false)
@@ -399,19 +404,21 @@ watch(activityTrackingEnabled, (enabled) => {
                             System default: {{ preferredColor }}
                         </span>
                     </div>
-                    <label class="flex items-center">
+                    <label v-if="!isMobile" class="flex items-center">
                         <Checkbox v-model:checked="isWidgetActivated" name="remember" />
                         <span class="ms-2 text-sm">Show Timetracker Widget</span>
                     </label>
-                    <label class="flex items-center">
+                    <label v-if="!isMobile" class="flex items-center">
                         <Checkbox v-model:checked="isTrayTimerActivated" name="tray_timer" />
                         <span class="ms-2 text-sm">Show Tray / Menu Bar Timer</span>
                     </label>
-                    <label class="flex items-center">
+                    <label v-if="!isMobile" class="flex items-center">
                         <Checkbox v-model:checked="idleDetectionEnabled" name="idleDetection" />
                         <span class="ms-2 text-sm">Enable Idle Detection</span>
                     </label>
-                    <div v-if="idleDetectionEnabled" class="ml-6 flex items-center space-x-2">
+                    <div
+                        v-if="!isMobile && idleDetectionEnabled"
+                        class="ml-6 flex items-center space-x-2">
                         <label for="idleThreshold" class="text-sm">Idle threshold (minutes):</label>
                         <input
                             id="idleThreshold"
@@ -551,6 +558,7 @@ watch(activityTrackingEnabled, (enabled) => {
             </div>
 
             <div
+                v-if="!isMobile"
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div class="flex items-center space-x-4">

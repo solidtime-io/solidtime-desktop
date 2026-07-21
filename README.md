@@ -57,6 +57,24 @@ $ npm run build:mac
 $ npm run build:linux
 ```
 
+### iOS
+
+The iOS app reuses the same Vue renderer wrapped in a native [Capacitor](https://capacitorjs.com)
+shell (Electron itself does not run on iOS). It is a manual time tracker that
+syncs to the solidtime backend — automatic activity/idle tracking, the tray and
+the mini-window are desktop-only and disabled on iOS.
+
+```bash
+# Build the web bundle and sync it into the native iOS project
+$ npm run sync:ios
+
+# Open the project in Xcode to run on a simulator or device
+$ npx cap open ios
+```
+
+Select your signing team on the `App` target in Xcode before running. See
+[docs/ios.md](./docs/ios.md) for the full architecture and workflow.
+
 
 ## Contributing
 

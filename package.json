@@ -29,6 +29,9 @@
         "build:mac": "npm run build && electron-builder --mac",
         "build:linux": "npm run build && electron-builder --linux",
         "build:linux:flatpak": "npm run build && electron-builder --linux flatpak",
+        "build:ios": "vite build --config vite.config.ios.ts && mv dist-ios/ios.html dist-ios/index.html",
+        "sync:ios": "npm run build:ios && cap sync ios",
+        "dev:ios": "vite --config vite.config.ios.ts",
         "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
         "test:unit": "vitest run",
         "test:unit:watch": "vitest"
@@ -57,6 +60,13 @@
         "vue-router": "^5.0.4"
     },
     "devDependencies": {
+        "@capacitor/app": "^8.1.1",
+        "@capacitor/browser": "^8.0.4",
+        "@capacitor/cli": "^8.4.2",
+        "@capacitor/core": "^8.4.2",
+        "@capacitor/ios": "^8.4.2",
+        "@capacitor/preferences": "^8.0.1",
+        "@capacitor/status-bar": "^8.0.3",
         "@electron-toolkit/eslint-config": "^1.0.2",
         "@electron-toolkit/eslint-config-ts": "^2.0.0",
         "@electron-toolkit/tsconfig": "^2.0.0",
@@ -104,12 +114,6 @@
         }
     },
     "optionalDependencies": {
-        "@rollup/rollup-darwin-arm64": "*",
-        "@rollup/rollup-darwin-x64": "*",
-        "@rollup/rollup-linux-arm64-gnu": "*",
-        "@rollup/rollup-linux-x64-gnu": "*",
-        "@rollup/rollup-win32-arm64-msvc": "*",
-        "@rollup/rollup-win32-x64-msvc": "*",
         "@miniben90/x-win-darwin-arm64": "*",
         "@miniben90/x-win-darwin-universal": "*",
         "@miniben90/x-win-darwin-x64": "*",
@@ -117,6 +121,12 @@
         "@miniben90/x-win-linux-x64-musl": "*",
         "@miniben90/x-win-win32-arm64-msvc": "*",
         "@miniben90/x-win-win32-ia32-msvc": "*",
-        "@miniben90/x-win-win32-x64-msvc": "*"
+        "@miniben90/x-win-win32-x64-msvc": "*",
+        "@rollup/rollup-darwin-arm64": "*",
+        "@rollup/rollup-darwin-x64": "*",
+        "@rollup/rollup-linux-arm64-gnu": "*",
+        "@rollup/rollup-linux-x64-gnu": "*",
+        "@rollup/rollup-win32-arm64-msvc": "*",
+        "@rollup/rollup-win32-x64-msvc": "*"
     }
 }
