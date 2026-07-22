@@ -65,6 +65,8 @@ if (process.contextIsolated || true) {
                 ipcRenderer.invoke('deleteWindowActivitiesInRange', startDate, endDate),
             deleteActivityPeriodsInRange: (startDate: string, endDate: string) =>
                 ipcRenderer.invoke('deleteActivityPeriodsInRange', startDate, endDate),
+            setTitleBarOverlay: (theme: 'dark' | 'light') =>
+                ipcRenderer.send('setTitleBarOverlay', theme),
             getXWinExtensionStatus: () => ipcRenderer.invoke('getXWinExtensionStatus'),
             installXWinExtension: () => ipcRenderer.invoke('installXWinExtension'),
             enableXWinExtension: () => ipcRenderer.invoke('enableXWinExtension'),

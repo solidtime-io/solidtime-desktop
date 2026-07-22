@@ -17,9 +17,11 @@ const theme = computed(() => {
 
 function useTheme() {
     document.documentElement.classList.add(theme.value)
+    window.electronAPI?.setTitleBarOverlay?.(theme.value)
     watch(theme, (newTheme, oldTheme) => {
         document.documentElement.classList.remove(oldTheme)
         document.documentElement.classList.add(newTheme)
+        window.electronAPI?.setTitleBarOverlay?.(newTheme)
     })
 }
 

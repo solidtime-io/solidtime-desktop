@@ -1,9 +1,30 @@
 import { join } from 'path'
-import { app, autoUpdater as nativeAutoUpdater, BrowserWindow, ipcMain, shell } from 'electron'
+import {
+    app,
+    autoUpdater as nativeAutoUpdater,
+    BrowserWindow,
+    ipcMain,
+    nativeTheme,
+    shell,
+} from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { isE2ETesting } from './env'
 
 let mainWindowInstance: BrowserWindow | null = null
+
+// Background and symbol colors for the Windows native window controls overlay,
+// kept in sync with the app's top bar (`bg-background dark:bg-primary`).
+const TITLE_BAR_OVERLAY_COLORS = {
+    dark: { color: '#1c1c1c', symbolColor: '#ffffff' },
+    light: { color: '#f5f5f5', symbolColor: '#18181b' },
+} as const
+
+// Best guess at the theme before the renderer loads: the OS preference.
+// This matches when the when 'system' is configured as a theme, otherwise
+// it may flash because the theme state is currently only in the renderer
+function initialOverlayTheme(): 'dark' | 'light' {
+    return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+}
 
 export function getMainWindow(): BrowserWindow | null {
     return mainWindowInstance
@@ -20,7 +41,9 @@ export function initializeMainWindow(icon: string) {
         backgroundColor: '#0f1011',
         titleBarStyle: 'hidden',
         // expose window controls in Windows/Linux
-        ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {}),
+        ...(process.platform !== 'darwin'
+            ? { titleBarOverlay: TITLE_BAR_OVERLAY_COLORS[initialOverlayTheme()] }
+            : {}),
         autoHideMenuBar: true,
         ...(process.platform === 'linux' ? { icon } : {}),
         webPreferences: {
@@ -111,6 +134,17 @@ export function registerMainWindowListeners(mainWindow: BrowserWindow) {
         if (mainWindow && !isE2ETesting()) {
             mainWindow.show()
             mainWindow.focus()
+        }
+    })
+    ipcMain.on('setTitleBarOverlay', (_event, theme: 'dark' | 'light') => {
+        // macOS uses native traffic lights (no overlay). Windows and Linux both
+        // enable the overlay in the constructor, so keep it in sync with the theme.
+        if (process.platform === 'darwin' || mainWindow.isDestroyed()) return
+        try {
+            mainWindow.setTitleBarOverlay(TITLE_BAR_OVERLAY_COLORS[theme])
+        } catch {
+            // The overlay may not be active on some Linux window managers;
+            // setTitleBarOverlay throws in that case, so treat it as a no-op.
         }
     })
 
