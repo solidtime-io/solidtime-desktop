@@ -431,7 +431,7 @@ watch(activityTrackingEnabled, (enabled) => {
                         <span class="ms-2 text-sm">Enable Window Activity Tracking</span>
                     </label>
                     <div v-if="!activityTrackingSupported" class="ml-6">
-                        <p class="text-xs text-yellow-600">
+                        <p class="text-xs text-yellow-700 dark:text-yellow-200">
                             {{ activityTrackingUnsupportedReason }}
                         </p>
                     </div>
@@ -445,7 +445,7 @@ watch(activityTrackingEnabled, (enabled) => {
                         <div
                             v-if="xWinExtensionStatus?.applicable"
                             class="space-y-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
-                            <div class="text-xs font-medium text-yellow-200">
+                            <div class="text-xs font-medium text-yellow-700 dark:text-yellow-200">
                                 GNOME Wayland detected
                             </div>
                             <p class="text-xs text-muted-foreground">
@@ -460,10 +460,12 @@ watch(activityTrackingEnabled, (enabled) => {
                             </p>
                             <p
                                 v-else-if="!xWinExtensionStatus.installed"
-                                class="text-xs font-medium text-yellow-200">
+                                class="text-xs font-medium text-yellow-700 dark:text-yellow-200">
                                 The extension is not installed yet.
                             </p>
-                            <p v-else class="text-xs font-medium text-yellow-200">
+                            <p
+                                v-else
+                                class="text-xs font-medium text-yellow-700 dark:text-yellow-200">
                                 The extension is installed but not enabled yet. If you just
                                 installed it, log out of your GNOME session and sign back in first
                                 so the extension is loaded.
@@ -530,13 +532,15 @@ watch(activityTrackingEnabled, (enabled) => {
                                 After installing the extension, log out and sign back in to your
                                 GNOME session. Then reopen solidtime and enable the extension here.
                             </p>
-                            <p v-if="xWinExtensionNeedsSetup" class="text-xs text-yellow-200">
+                            <p
+                                v-if="xWinExtensionNeedsSetup"
+                                class="text-xs text-yellow-700 dark:text-yellow-200">
                                 Activity tracking is enabled, but GNOME Wayland will not report the
                                 focused window until this extension is ready.
                             </p>
                         </div>
                         <div v-if="!hasPermission && activityTrackingEnabled" class="space-y-2">
-                            <p class="text-xs text-yellow-600">
+                            <p class="text-xs text-yellow-700 dark:text-yellow-200">
                                 Screen Recording permission not granted. Activity tracking is
                                 enabled but window titles may not be captured.
                             </p>
