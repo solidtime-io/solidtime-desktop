@@ -14,7 +14,8 @@
 # Seeded 2026-07-29 from the authors of every merged pull request.
 
 nicoeg
-Onatcer
+onatcer
 sdip15fa
-SGudbrandsson
+sgudbrandsson
+thespyder
 thopedam
