@@ -305,22 +305,31 @@ async function showIdleDialog(idleStartTime: string, idleEndTime: string, durati
     const startTime = formatTime(idleStartTime)
     const endTime = formatTime(idleEndTime)
 
-    // Focus the main window to ensure dialog appears on top
     if (mainWindow.isMinimized()) {
         mainWindow.restore()
     }
+    if (!mainWindow.isVisible()) {
+        mainWindow.show()
+    }
+    mainWindow.flashFrame(true)
+    app.focus({ steal: true })
     mainWindow.focus()
 
-    const result = await dialog.showMessageBox(mainWindow, {
-        type: 'question',
-        title: 'Idle Time Detected',
-        message: 'You were away from your computer',
-        detail: `Idle Duration: ${formattedDuration}\nIdle Start: ${startTime}\nActivity Resumed: ${endTime}\n\nWhat would you like to do with the idle time?`,
-        buttons: ['Keep Idle Time', 'Discard Idle Time', 'Discard & Start New Timer'],
-        defaultId: 0,
-        cancelId: 0,
-        noLink: true,
-    })
+    let result: Electron.MessageBoxReturnValue
+    try {
+        result = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            title: 'Idle Time Detected',
+            message: 'You were away from your computer',
+            detail: `Idle Duration: ${formattedDuration}\nIdle Start: ${startTime}\nActivity Resumed: ${endTime}\n\nWhat would you like to do with the idle time?`,
+            buttons: ['Keep Idle Time', 'Discard Idle Time', 'Discard & Start New Timer'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+        })
+    } finally {
+        mainWindow.flashFrame(false)
+    }
 
     console.log('Idle dialog choice:', result.response)
 
