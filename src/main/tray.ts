@@ -32,6 +32,22 @@ function getIconPath(active: boolean) {
     return isDarkMode ? inactiveTrayIconInverted : inactiveTrayIcon
 }
 
+function showWindowFromTray(mainWindow: BrowserWindow) {
+    if (mainWindow.isDestroyed()) {
+        return
+    }
+
+    mainWindow.show()
+}
+
+function sendToWindowFromTray(mainWindow: BrowserWindow, channel: string) {
+    if (mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
+        return
+    }
+
+    mainWindow.webContents.send(channel)
+}
+
 function buildMenu(mainWindow: BrowserWindow, timeEntry: TimeEntry | null) {
     const isRunning = isTimerRunning(timeEntry)
 
@@ -46,20 +62,20 @@ function buildMenu(mainWindow: BrowserWindow, timeEntry: TimeEntry | null) {
         {
             label: 'Show',
             click() {
-                mainWindow.show()
+                showWindowFromTray(mainWindow)
             },
         },
         {
             label: 'Continue',
             click() {
-                mainWindow.webContents.send('startTimer')
+                sendToWindowFromTray(mainWindow, 'startTimer')
             },
             enabled: !isRunning,
         },
         {
             label: 'Stop',
             click() {
-                mainWindow.webContents.send('stopTimer')
+                sendToWindowFromTray(mainWindow, 'stopTimer')
             },
             enabled: isRunning,
         },
