@@ -84,12 +84,17 @@ window.getWeekStartSetting = () => meResponse.value?.data?.week_start || 'monday
 // <keep-alive> will cache it with the fallback for the whole session.
 const isMeLoaded = computed(() => !!meResponse.value?.data)
 
-// Watch timer state and notify main process for idle detection
-watch(isActive, (active) => {
-    if (window.electronAPI?.timerStateChanged) {
-        window.electronAPI.timerStateChanged(active)
-    }
-})
+// Watch timer state and notify main process for idle detection.
+// immediate for already running time entry in local storage
+watch(
+    isActive,
+    (active) => {
+        if (window.electronAPI?.timerStateChanged) {
+            window.electronAPI.timerStateChanged(active)
+        }
+    },
+    { immediate: true }
+)
 
 onMounted(async () => {
     initializeAuth(queryClient)
