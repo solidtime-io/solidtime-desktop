@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useQuery, useInfiniteQuery } from '@tanstack/vue-query'
+import { useQuery, useInfiniteQuery, useIsMutating } from '@tanstack/vue-query'
 import { type Component, computed, onMounted, ref, watch, watchEffect } from 'vue'
 
 import {
@@ -45,7 +45,13 @@ import { fromError } from 'zod-validation-error'
 import { apiClient } from '../utils/api'
 import { updateTrayState } from '../utils/tray'
 import { isTrayTimerActivated } from '../utils/settings'
-import { useTimer } from '../utils/useTimer.ts'
+import { useTimer, getLastWorkTimeEntry } from '../utils/useTimer.ts'
+import { useBreaksEnabled } from '../utils/organization.ts'
+import { useRouter } from 'vue-router'
+import { useStorage } from '@vueuse/core'
+
+// Same as the ui package's TimeTrackerMode, which is not exported from its index
+type TimeTrackerMode = 'project' | 'simple'
 
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
@@ -53,8 +59,36 @@ const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
 
 // Use the timer composable for shared timer logic
-const { currentTimeEntry, lastTimeEntry, isActive, stopTimer, startTimer, timeEntryCreate } =
-    useTimer()
+const {
+    currentTimeEntry,
+    lastTimeEntry,
+    isActive,
+    isOnBreak,
+    stopTimer,
+    startTimer,
+    startBreak,
+    resumeWorkAfterBreak,
+    timeEntryCreate,
+} = useTimer()
+
+const breaksEnabled = useBreaksEnabled()
+
+const lastWorkTimeEntry = computed(() => getLastWorkTimeEntry(timeEntries.value ?? []))
+const canResumeAfterBreak = computed(() => lastWorkTimeEntry.value !== null)
+
+async function resumePreviousWorkAfterBreak() {
+    const timeEntry = lastWorkTimeEntry.value
+    if (!timeEntry) {
+        return
+    }
+    await resumeWorkAfterBreak(timeEntry)
+}
+
+const timeTrackerMode = useStorage<TimeTrackerMode>('solidtime/time-tracker-mode', 'project')
+
+function toggleTimeTrackerMode() {
+    timeTrackerMode.value = timeTrackerMode.value === 'simple' ? 'project' : 'simple'
+}
 
 const selectedTimeEntries = ref([] as TimeEntry[])
 
@@ -87,32 +121,43 @@ const timeEntries = computed(() => {
     return timeEntriesInfiniteData.value.pages.flatMap((page) => page.data)
 })
 
-const { data: currentTimeEntryResponse, isError: currentTimeEntryResponseIsError } = useQuery({
+const pendingTimeEntryMutations = useIsMutating({
+    predicate: (mutation) => mutation.options.scope?.id === 'timeEntry',
+})
+
+const {
+    data: currentTimeEntryResponse,
+    isError: currentTimeEntryResponseIsError,
+    dataUpdatedAt: currentTimeEntryUpdatedAt,
+    errorUpdatedAt: currentTimeEntryErrorUpdatedAt,
+} = useQuery({
     queryKey: ['currentTimeEntry'],
     queryFn: () => getCurrentTimeEntry(),
     staleTime: 0, // Always refetch on window focus to catch external changes
+    // While time-entry mutations are in flight the server state is transiently
+    // behind (e.g. between stopping work and creating a break), so don't fetch;
+    // the query refetches once the mutation queue has drained
+    enabled: computed(() => pendingTimeEntryMutations.value === 0),
 })
 
-// Update lastTimeEntry when timeEntries change
+// Only work entries qualify — continuing or resuming from the widget/tray must never restart a break
 watch(timeEntries, () => {
-    if (timeEntries.value?.[0]) {
-        lastTimeEntry.value = { ...timeEntries.value?.[0] }
+    const lastWork = getLastWorkTimeEntry(timeEntries.value ?? [])
+    if (lastWork) {
+        lastTimeEntry.value = { ...lastWork }
     }
 })
 
-watch(currentTimeEntryResponseIsError, () => {
+function reconcileCurrentTimeEntry() {
     if (currentTimeEntryResponseIsError.value) {
         // Only reset if we had a previously started timer (has an ID)
         // Don't reset if user is preparing a new time entry (no ID yet)
         if (currentTimeEntry.value.id !== '') {
             currentTimeEntry.value = { ...emptyTimeEntry }
         }
+        return
     }
-})
 
-watch(currentTimeEntryResponse, () => {
-    console.log('update current time entry data')
-    console.log(currentTimeEntryResponse.value)
     if (currentTimeEntryResponse.value?.data) {
         currentTimeEntry.value = { ...currentTimeEntryResponse.value?.data }
     } else if (currentTimeEntry.value.id !== '') {
@@ -120,7 +165,12 @@ watch(currentTimeEntryResponse, () => {
         // (e.g. stopped from another app) — clear it
         currentTimeEntry.value = { ...emptyTimeEntry }
     }
-})
+}
+
+// The timestamps bump on every fetch settle, even when structural sharing
+// keeps the data reference identical — a plain watch on the response would
+// miss the refetch-after-drain when the server state ended up unchanged
+watch([currentTimeEntryUpdatedAt, currentTimeEntryErrorUpdatedAt], reconcileCurrentTimeEntry)
 
 const { data: projectsResponse } = useQuery({
     queryKey: ['projects', currentOrganizationId],
@@ -175,6 +225,20 @@ async function createManualTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'membe
     await timeEntryCreate.mutateAsync(updatedTimeEntry)
 }
 
+// Emitted by the range selector when a finished start-end range is entered with no timer running
+async function createTimeEntryFromCurrentEntry() {
+    const { start, end, description, project_id, task_id, billable, tags } = currentTimeEntry.value
+    await createManualTimeEntry({ start, end, description, project_id, task_id, billable, tags })
+    currentTimeEntry.value = { ...emptyTimeEntry }
+}
+
+const router = useRouter()
+
+// Navigate the calendar to a break's day so its placement can be fixed there.
+function goToCalendarDay(date: string) {
+    router.push({ path: '/calendar', query: { date } })
+}
+
 async function createTag(newTagName: string): Promise<Tag | undefined> {
     const { data, mutateAsync } = tagCreate
     await mutateAsync({ name: newTagName })
@@ -184,10 +248,15 @@ async function createTag(newTagName: string): Promise<Tag | undefined> {
     return undefined
 }
 
-// Watch for current time entry changes and update tray state
-watch(currentTimeEntry, () => {
-    updateTrayState({ ...currentTimeEntry.value })
-})
+// Deep: TimeTrackerControls edits fields (e.g. the start time) in place,
+// and the tray must pick those up too
+watch(
+    currentTimeEntry,
+    () => {
+        updateTrayState({ ...currentTimeEntry.value })
+    },
+    { deep: true }
+)
 
 watch(isTrayTimerActivated, () => {
     updateTrayState({ ...currentTimeEntry.value })
@@ -332,6 +401,11 @@ watch(isLoadMoreVisible, async (isVisible) => {
                             :projects
                             :createTag
                             :isActive
+                            :isOnBreak
+                            :breaksEnabled
+                            :canResumeAfterBreak
+                            :resumeDescription="lastWorkTimeEntry?.description ?? null"
+                            :timeTrackerMode
                             :currency
                             :organizationBillableRate
                             :timeEntries="timeEntries"
@@ -339,13 +413,21 @@ watch(isLoadMoreVisible, async (isVisible) => {
                             @stop-live-timer="stopLiveTimer"
                             @start-timer="startTimer"
                             @stop-timer="stopTimer"
+                            @start-break="startBreak"
+                            @resume-after-break="resumePreviousWorkAfterBreak"
+                            @create-time-entry="createTimeEntryFromCurrentEntry"
                             @update-time-entry="updateCurrentTimeEntry"></TimeTrackerControls>
                     </div>
                 </div>
                 <div class="flex justify-center items-center pt-9 group pr-4">
                     <TimeTrackerMoreOptionsDropdown
                         :hasActiveTimer="isActive"
+                        :timeTrackerMode
+                        :breaksEnabled
+                        :isOnBreak
                         @manual-entry="showManualTimeEntryModal = true"
+                        @start-break="startBreak"
+                        @toggle-time-tracker-mode="toggleTimeTrackerMode"
                         @discard="discardTimer" />
                     <TimeEntryCreateModal
                         v-model:show="showManualTimeEntryModal"
@@ -420,6 +502,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     "
                     :createTimeEntry="createTimeEntry"
                     :createTag
+                    :fixInCalendar="goToCalendarDay"
                     :timeEntries="timeEntries"></TimeEntryGroupedTable>
                 <div v-if="timeEntries && timeEntries.length === 0" class="text-center pt-12">
                     <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>

@@ -6,3 +6,9 @@ out
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# E2E test temp directories
+.e2e-userdata-*
+
+# Playwright output (debug screenshots, failure artifacts)
+test-results/

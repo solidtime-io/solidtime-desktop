@@ -9,6 +9,16 @@ export async function listenForBackendEvent(event: string, callback: () => void)
             callback()
         })
     }
+    if (event === 'startBreak') {
+        window.electronAPI.onStartBreak(() => {
+            callback()
+        })
+    }
+    if (event === 'resumeAfterBreak') {
+        window.electronAPI.onResumeAfterBreak(() => {
+            callback()
+        })
+    }
 }
 
 export async function sendEventToWindow(_: string, event: string) {
@@ -17,5 +27,11 @@ export async function sendEventToWindow(_: string, event: string) {
     }
     if (event === 'stopTimer') {
         window.electronAPI.stopTimer()
+    }
+    if (event === 'startBreak') {
+        window.electronAPI.startBreak()
+    }
+    if (event === 'resumeAfterBreak') {
+        window.electronAPI.resumeAfterBreak()
     }
 }

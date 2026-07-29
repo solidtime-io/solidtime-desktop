@@ -101,7 +101,7 @@ export const test = base.extend<ElectronTestFixtures>({
             const state = await setupApiMocks(mainPage)
             for (const win of allWindows) {
                 if (win !== mainPage) {
-                    await setupApiMocks(win)
+                    await setupApiMocks(win, state)
                 }
             }
 

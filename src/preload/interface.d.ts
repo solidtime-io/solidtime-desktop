@@ -51,10 +51,14 @@ export interface IElectronAPI {
     installUpdate: () => void
     startTimer: () => void
     stopTimer: () => void
+    startBreak: () => void
+    resumeAfterBreak: () => void
     onOpenDeeplink: (callback: (url: string) => Promise<void>) => void
     onAutoUpdaterError: (callback: (error: string | undefined) => Promise<void>) => void
     onStartTimer: (callback: () => void) => void
     onStopTimer: (callback: () => void) => void
+    onStartBreak: (callback: () => void) => void
+    onResumeAfterBreak: (callback: () => void) => void
     updateTrayState: (timeEntry: string, showTimer: boolean) => void
     updateAutoUpdater: () => void
     updateIdleThreshold: (thresholdMinutes: number) => void

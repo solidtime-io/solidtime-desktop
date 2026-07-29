@@ -12,7 +12,7 @@ declare global {
 import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
 import { useQueryClient, useQuery } from '@tanstack/vue-query'
 
-import { onMounted, ref, watchEffect, watch, computed } from 'vue'
+import { onMounted, provide, ref, watchEffect, watch, computed } from 'vue'
 import { initializeAuth, isLoggedIn, openLoginWindow } from './utils/oauth.ts'
 
 import InstanceSettingsModal from './components/InstanceSettingsModal.vue'
@@ -32,13 +32,19 @@ import { useLiveTimer } from './utils/liveTimer'
 import { dayjs } from './utils/dayjs'
 import { useStorage } from '@vueuse/core'
 import { emptyTimeEntry } from './utils/timeEntries'
+import { useOrganization } from './utils/organization.ts'
 
 const router = useRouter()
+
+// Shared ui components (e.g. the calendar) inject 'organization' for settings like breaks_enabled
+const { organization } = useOrganization()
+provide('organization', organization)
 
 const queryClient = useQueryClient()
 
 // Use the timer composable for shared timer logic
-const { stopTimer, continueLastTimer, isActive } = useTimer()
+const { stopTimer, continueLastTimer, isActive, lastTimeEntry, startBreak, resumeWorkAfterBreak } =
+    useTimer()
 
 // Live timer for bottom row display
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
@@ -62,7 +68,8 @@ watchEffect(() => {
     }
 })
 
-// Fetch user data for timezone and week start settings
+// Fetch user data for timezone and week start settings. Enabled only once
+// logged in — an unauthenticated 401 is never retried.
 const { data: meResponse } = useQuery({
     queryKey: ['me'],
     queryFn: () => getMe(),
@@ -97,6 +104,15 @@ onMounted(async () => {
     })
     await listenForBackendEvent('stopTimer', () => {
         stopTimer()
+    })
+    await listenForBackendEvent('startBreak', () => {
+        startBreak()
+    })
+    await listenForBackendEvent('resumeAfterBreak', () => {
+        // Guard: a stale stored break entry must never be resumed as work
+        if (lastTimeEntry.value?.start && lastTimeEntry.value.type !== 'break') {
+            resumeWorkAfterBreak(lastTimeEntry.value)
+        }
     })
 
     // Listen for idle dialog response from main process

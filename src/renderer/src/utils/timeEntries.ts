@@ -20,6 +20,7 @@ export const emptyTimeEntry = {
     project_id: null,
     tags: [],
     billable: false,
+    type: 'work',
     organization_id: '',
 } as TimeEntry
 
@@ -86,7 +87,6 @@ export function getCurrentTimeEntry() {
 
 export function useTimeEntryStopMutation() {
     const queryClient = useQueryClient()
-    const { currentOrganizationId } = useMyMemberships()
 
     return useMutation({
         scope: {
@@ -113,15 +113,61 @@ export function useTimeEntryStopMutation() {
             )
         },
         onMutate: async (timeEntry: TimeEntry) => {
-            await queryClient.cancelQueries({ queryKey: ['timeEntries', currentOrganizationId] })
+            const timeEntriesQueryKey = ['timeEntries', timeEntry.organization_id]
+
+            await queryClient.cancelQueries({ queryKey: timeEntriesQueryKey })
             await queryClient.cancelQueries({ queryKey: ['currentTimeEntry'] })
 
-            queryClient.setQueryData(['currentTimeEntry'], () => emptyTimeEntry)
+            const previousTimeEntries =
+                queryClient.getQueryData<InfiniteData<TimeEntryResponse>>(timeEntriesQueryKey)
 
-            return { timeEntry }
+            queryClient.setQueryData<InfiniteData<TimeEntryResponse>>(
+                timeEntriesQueryKey,
+                (old) => {
+                    if (!old?.pages[0]) {
+                        return old
+                    }
+
+                    const pages = old.pages.map((page) => ({
+                        ...page,
+                        data: page.data.filter((entry) => entry.id !== timeEntry.id),
+                    }))
+
+                    pages[0] = {
+                        ...pages[0],
+                        data: [timeEntry, ...pages[0].data],
+                    }
+
+                    return { ...old, pages }
+                }
+            )
+            // Only clear the active entry if the cache still holds the entry
+            // being stopped — a follow-up create (e.g. a break) may have
+            // already written its optimistic entry here
+            queryClient.setQueryData(['currentTimeEntry'], (old: unknown) => {
+                // The cache holds either a raw entry or a { data: entry } response
+                const oldEntry = (
+                    old && typeof old === 'object' && 'data' in old
+                        ? (old as { data: TimeEntry }).data
+                        : old
+                ) as TimeEntry | undefined
+                if (oldEntry?.id && oldEntry.id !== timeEntry.id) {
+                    return old
+                }
+                return emptyTimeEntry
+            })
+
+            return { previousTimeEntries, timeEntriesQueryKey }
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['timeEntries', currentOrganizationId] })
+        onError: (_error, _timeEntry, context) => {
+            if (context?.previousTimeEntries) {
+                queryClient.setQueryData(context.timeEntriesQueryKey, context.previousTimeEntries)
+            }
+        },
+        onSettled: (_data, _error, timeEntry) => {
+            queryClient.invalidateQueries({
+                queryKey: ['timeEntries', timeEntry.organization_id],
+            })
             queryClient.invalidateQueries({ queryKey: ['currentTimeEntry'] })
         },
     })
@@ -351,11 +397,13 @@ export function useTimeEntryCreateMutation() {
         },
         onMutate: async (variables) => {
             await queryClient.cancelQueries({ queryKey: ['currentTimeEntry'] })
+            // Reuse the caller's optimistic id so the entry is stoppable before the POST settles
+            const callerId = (variables as { id?: string }).id
             const optimisticTimeEntry = {
                 data: {
                     ...variables,
                     organization_id: currentOrganizationId.value,
-                    id: self.crypto.randomUUID(),
+                    id: callerId && callerId !== '' ? callerId : self.crypto.randomUUID(),
                 },
             }
             queryClient.setQueryData(['currentTimeEntry'], () => optimisticTimeEntry)

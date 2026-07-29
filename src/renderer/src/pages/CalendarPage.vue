@@ -8,6 +8,8 @@ import { getAllTags, useTagCreateMutation } from '../utils/tags.ts'
 import { getAllClients, useClientCreateMutation } from '../utils/clients.ts'
 import { currentMembershipId, useMyMemberships } from '../utils/myMemberships.ts'
 import { dayjs } from '../utils/dayjs.ts'
+import { useRoute } from 'vue-router'
+import type { Dayjs } from 'dayjs'
 import { apiClient } from '../utils/api'
 import type {
     CreateClientBody,
@@ -25,8 +27,13 @@ import { useAppIcons } from '../utils/appIcons.ts'
 const { currentOrganizationId, currentMembership } = useMyMemberships()
 const currentOrganizationLoaded = computed(() => !!currentOrganizationId.value)
 
-const calendarStart = ref<Date | undefined>(undefined)
-const calendarEnd = ref<Date | undefined>(undefined)
+// Deep link (e.g. "Fix in calendar") opening a specific day. The page is
+// kept alive, so :key re-mounts the calendar when the date changes.
+const route = useRoute()
+const initialDate = computed(() => (route.query.date as string | undefined) ?? null)
+
+const calendarStart = ref<Dayjs | undefined>(undefined)
+const calendarEnd = ref<Dayjs | undefined>(undefined)
 
 const enableCalendarQuery = computed(() => {
     return !!currentOrganizationId.value && !!calendarStart.value && !!calendarEnd.value
@@ -136,6 +143,7 @@ async function createTimeEntry(entry: Omit<TimeEntry, 'id' | 'organization_id' |
             end: (entry.end as string | null) ?? null,
             description: (entry.description as string | null) ?? null,
             billable: entry.billable as boolean,
+            type: (entry.type as 'work' | 'break' | undefined) ?? 'work',
             tags: (entry.tags as string[] | null) ?? null,
         },
         {
@@ -158,6 +166,7 @@ async function updateTimeEntry(entry: TimeEntry) {
             end: (entry.end as string | null) ?? null,
             description: (entry.description as string | null) ?? null,
             billable: entry.billable as boolean,
+            type: (entry.type as 'work' | 'break' | undefined) ?? 'work',
             tags: (entry.tags as string[] | null) ?? null,
         },
         {
@@ -201,7 +210,7 @@ async function createTag(name: string): Promise<Tag | undefined> {
     return result.data
 }
 
-function onDatesChange({ start, end }: { start: Date; end: Date }) {
+function onDatesChange({ start, end }: { start: Dayjs; end: Dayjs }) {
     calendarStart.value = start
     calendarEnd.value = end
 }
@@ -317,7 +326,9 @@ const activityPeriodsWithIcons = computed<ActivityPeriod[]>(() => {
         </div>
         <template v-else>
             <TimeEntryCalendar
+                :key="initialDate ?? 'calendar'"
                 class="flex-1"
+                :initialDate="initialDate"
                 :timeEntries="currentTimeEntries"
                 :projects="projects"
                 :tasks="tasks"

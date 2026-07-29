@@ -49,6 +49,9 @@ export function initializeMainWindow(icon: string) {
         webPreferences: {
             preload: join(__dirname, '../preload/main.mjs'),
             sandbox: false,
+            // The hidden main window drives requests for the mini widget and
+            // tray — without this, Chromium suspends it and timer actions stall
+            backgroundThrottling: false,
             // The vite dev server causes CORS issues, so we disable webSecurity in development mode
             webSecurity: process.env.NODE_ENV !== 'development',
         },
@@ -129,6 +132,12 @@ export function registerMainWindowListeners(mainWindow: BrowserWindow) {
     })
     ipcMain.on('stopTimer', () => {
         mainWindow.webContents.send('stopTimer')
+    })
+    ipcMain.on('startBreak', () => {
+        mainWindow.webContents.send('startBreak')
+    })
+    ipcMain.on('resumeAfterBreak', () => {
+        mainWindow.webContents.send('resumeAfterBreak')
     })
     ipcMain.on('showMainWindow', () => {
         if (mainWindow && !isE2ETesting()) {

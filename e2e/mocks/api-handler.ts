@@ -48,12 +48,11 @@ function getPathname(url: string): string {
 /**
  * Register API route handlers on a Playwright page.
  * Returns a mutable state object that tests can modify to change mock responses.
+ * Pass an existing state to share it across windows (main + mini).
  */
-export async function setupApiMocks(page: Page): Promise<MockState> {
-    const defaultData = createDefaultMockData()
-
-    const state: MockState = {
-        ...defaultData,
+export async function setupApiMocks(page: Page, sharedState?: MockState): Promise<MockState> {
+    const state: MockState = sharedState ?? {
+        ...createDefaultMockData(),
         activeTimeEntry: null,
     }
 
@@ -96,6 +95,7 @@ export async function setupApiMocks(page: Page): Promise<MockState> {
                     project_id: null,
                     tags: [],
                     billable: false,
+                    type: 'work',
                     organization_id: '',
                 },
             })
@@ -111,13 +111,28 @@ export async function setupApiMocks(page: Page): Promise<MockState> {
             return jsonResponse(route, { data: state.user })
         }
 
+        // GET /api/v1/organizations/:org
+        if (pathname.match(/\/organizations\/[^/]+$/) && method === 'GET') {
+            return jsonResponse(route, { data: state.organization })
+        }
+
         // /api/v1/organizations/:org/time-entries/:id (specific entry)
         const timeEntryMatch = pathname.match(/\/organizations\/[^/]+\/time-entries\/([^/]+)$/)
         if (timeEntryMatch && timeEntryMatch[1] !== 'active') {
             if (method === 'PUT') {
                 const body = route.request().postDataJSON()
                 const updatedEntry = { ...state.activeTimeEntry, ...body }
-                state.activeTimeEntry = null
+                if (body.end) {
+                    // Stopping the entry
+                    state.activeTimeEntry = null
+                    state.timeEntries = [
+                        updatedEntry,
+                        ...state.timeEntries.filter((entry) => entry.id !== updatedEntry.id),
+                    ]
+                } else {
+                    // In-place edit of the running entry (e.g. changing its start time)
+                    state.activeTimeEntry = updatedEntry
+                }
                 return jsonResponse(route, { data: updatedEntry })
             }
             if (method === 'DELETE') {
@@ -132,7 +147,9 @@ export async function setupApiMocks(page: Page): Promise<MockState> {
                 return jsonResponse(route, { data: state.timeEntries })
             }
             if (method === 'POST') {
-                const body = route.request().postDataJSON()
+                // The real server generates its own id — ignore any id sent by the client
+                const { id: _ignored, ...body } = route.request().postDataJSON()
+                void _ignored
                 const newEntry = createTimeEntry(state.organization.id, state.user.id, {
                     ...body,
                     end: null,

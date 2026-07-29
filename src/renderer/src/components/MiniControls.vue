@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import { ChevronRightIcon } from '@heroicons/vue/16/solid'
+import { Coffee, Play } from '@lucide/vue'
 import { ProjectBadge, time, TimeTrackerStartStop } from '@solidtime/ui'
 import { useLiveTimer } from '../utils/liveTimer'
 import { useMyMemberships } from '../utils/myMemberships'
-import { computed, watch, watchEffect } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { emptyTimeEntry } from '../utils/timeEntries'
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useQuery } from '@tanstack/vue-query'
 import { getAllProjects } from '../utils/projects'
 import { getAllTasks } from '../utils/tasks'
 import { sendEventToWindow } from '../utils/events'
 import { showMainWindow } from '../utils/window'
 import { dayjs } from '../utils/dayjs'
+import { useBreaksEnabled } from '../utils/organization'
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
 
 const { currentOrganizationId } = useMyMemberships()
-
-const isRunning = computed(
-    () => currentTimeEntry.value.start !== '' && currentTimeEntry.value.start !== null
-)
+const currentTimeEntry = useStorage('currentTimeEntry', { ...emptyTimeEntry })
+const lastTimeEntry = useStorage('lastTimeEntry', { ...emptyTimeEntry })
 
 const organizationIdToLoad = computed(() => {
     if (currentTimeEntry.value.organization_id && currentTimeEntry.value.organization_id !== '') {
@@ -28,8 +28,29 @@ const organizationIdToLoad = computed(() => {
 })
 
 const currentOrganizationLoaded = computed(() => !!organizationIdToLoad.value)
+const breaksEnabled = useBreaksEnabled(organizationIdToLoad)
 
-const currentTimeEntry = useStorage('currentTimeEntry', { ...emptyTimeEntry })
+const isRunning = computed(
+    () => currentTimeEntry.value.start !== '' && currentTimeEntry.value.start !== null
+)
+
+const isOnBreak = computed(() => isRunning.value && currentTimeEntry.value.type === 'break')
+
+// Guard: a stale stored break entry must never be offered for resume
+const canResumeAfterBreak = computed(
+    () =>
+        isOnBreak.value && lastTimeEntry.value.start !== '' && lastTimeEntry.value.type !== 'break'
+)
+
+const resumeDescription = computed(() => lastTimeEntry.value.description || null)
+
+function startBreak() {
+    sendEventToWindow('main', 'startBreak')
+}
+
+function resumeAfterBreak() {
+    sendEventToWindow('main', 'resumeAfterBreak')
+}
 const { data: projectsResponse } = useQuery({
     queryKey: ['projects', organizationIdToLoad],
     queryFn: () => getAllProjects(organizationIdToLoad.value),
@@ -47,8 +68,6 @@ const { data: currentTimeEntryTasksResponse } = useQuery({
     queryFn: () => getAllTasks(currentTimeEntry.value.organization_id),
     enabled: currentOrganizationLoaded,
 })
-
-const lastTimeEntry = useStorage('lastTimeEntry', { ...emptyTimeEntry })
 
 const tasks = computed(() => {
     if (isRunning.value) {
@@ -87,46 +106,6 @@ const shownProject = computed(() => {
     }
 })
 
-const queryClient = useQueryClient()
-
-// invalidate queries if we encounter projects or tasks that are not in the store
-// because stores are currently not synced between mini and main window
-// (future, currentlyexperimental: https://tanstack.com/query/latest/docs/framework/vue/plugins/createPersister)
-watch(currentTimeEntry, () => {
-    console.log('currentTimeEntry changed')
-    if (
-        currentTimeEntry.value.project_id &&
-        projects.value &&
-        !projects.value.some((project) => project.id === currentTimeEntry.value.project_id)
-    ) {
-        console.log('project invalidate')
-        queryClient.invalidateQueries({ queryKey: ['projects'] })
-    }
-    if (
-        currentTimeEntry.value.task_id &&
-        tasks.value &&
-        !tasks.value.some((task) => task.id === currentTimeEntry.value.task_id)
-    ) {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    }
-})
-watch(lastTimeEntry, () => {
-    if (
-        lastTimeEntry.value.project_id &&
-        projects.value &&
-        !projects.value.some((project) => project.id === lastTimeEntry.value.project_id)
-    ) {
-        queryClient.invalidateQueries({ queryKey: ['projects'] })
-    }
-    if (
-        lastTimeEntry.value.task_id &&
-        tasks.value &&
-        !tasks.value.some((task) => task.id === lastTimeEntry.value.task_id)
-    ) {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    }
-})
-
 watchEffect(() => {
     if (isRunning.value) {
         startLiveTimer()
@@ -161,7 +140,9 @@ const currentTimer = computed(() => {
 <template>
     <div
         class="h-screen relative w-screen border-border-secondary border bg-primary rounded-[10px] text-white py-1 flex items-center cursor-default justify-between select-none">
-        <div class="text-sm text-text-tertiary flex items-center relative flex-1 min-w-0">
+        <div
+            class="text-sm text-text-tertiary flex items-center relative min-w-0"
+            :class="isOnBreak ? 'shrink-0' : 'flex-1'">
             <div class="pl-1 pr-1 z-20 relative block" style="-webkit-app-region: drag">
                 <svg
                     class="h-5"
@@ -180,7 +161,13 @@ const currentTimer = computed(() => {
             <div
                 class="cursor-pointer rounded-lg flex items-center shrink min-w-0"
                 @click="focusMainWindow">
-                <div class="flex items-center flex-1 space-x-0.5 min-w-0">
+                <div
+                    v-if="isOnBreak"
+                    class="flex items-center shrink-0 space-x-1.5 text-xs font-medium whitespace-nowrap text-amber-600 dark:text-amber-400">
+                    <Coffee class="w-3.5 h-3.5 shrink-0" />
+                    <span>On break</span>
+                </div>
+                <div v-else class="flex items-center flex-1 space-x-0.5 min-w-0">
                     <ProjectBadge
                         class="px-0 whitespace-nowrap overflow-ellipsis"
                         :border="false"
@@ -199,14 +186,37 @@ const currentTimer = computed(() => {
             <div class="flex-1 h-6 w-full" style="-webkit-app-region: drag"></div>
         </div>
 
-        <div class="pr-1 flex items-center space-x-1">
+        <div
+            class="pr-1 flex items-center space-x-1 min-w-0"
+            :class="isOnBreak ? 'flex-1 justify-end pl-2' : ''">
+            <button
+                v-if="canResumeAfterBreak"
+                type="button"
+                class="flex min-w-0 shrink items-center gap-1 h-6 px-2 rounded-md bg-transparent border border-amber-500/40 hover:bg-amber-500/15 text-xs font-medium text-amber-600 dark:text-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition"
+                @click="resumeAfterBreak">
+                <Play class="w-3 h-3 shrink-0" />
+                <span class="truncate">{{
+                    resumeDescription ? `Resume "${resumeDescription}"` : 'Resume'
+                }}</span>
+            </button>
             <div
-                class="text-xs font-semibold text-text-tertiary px-2 w-[65px] text-left"
+                class="text-xs font-semibold text-text-tertiary px-2 w-[65px] shrink-0 text-left"
                 style="-webkit-app-region: drag">
                 {{ currentTimer }}
             </div>
+            <button
+                v-if="breaksEnabled && !isOnBreak && isRunning"
+                type="button"
+                title="Take a break"
+                aria-label="Take a break"
+                class="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-quaternary text-text-tertiary hover:text-amber-500 focus:ring-2 focus:ring-border-tertiary transition"
+                @click="startBreak">
+                <Coffee class="w-3.5 h-3.5" />
+            </button>
             <TimeTrackerStartStop
+                class="shrink-0"
                 :active="isRunning"
+                :variant="isOnBreak ? 'break' : 'primary'"
                 size="small"
                 @changed="onToggleButtonPress"></TimeTrackerStartStop>
         </div>

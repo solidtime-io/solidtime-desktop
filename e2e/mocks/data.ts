@@ -34,6 +34,7 @@ export function createOrganization(overrides: Record<string, unknown> = {}) {
         employees_can_see_billable_rates: false,
         employees_can_manage_tasks: true,
         prevent_overlapping_time_entries: false,
+        breaks_enabled: false,
         currency: 'EUR',
         currency_symbol: '\u20ac',
         number_format: 'point-comma' as const,
@@ -65,6 +66,7 @@ export function createMembership(
             employees_can_see_billable_rates: organization.employees_can_see_billable_rates,
             employees_can_manage_tasks: organization.employees_can_manage_tasks,
             prevent_overlapping_time_entries: organization.prevent_overlapping_time_entries,
+            breaks_enabled: organization.breaks_enabled,
             currency: organization.currency,
             currency_symbol: organization.currency_symbol,
             number_format: organization.number_format,
@@ -142,6 +144,7 @@ export function createTimeEntry(
         project_id: null,
         tags: [] as string[],
         billable: false,
+        type: 'work',
         organization_id: organizationId,
         ...overrides,
     }

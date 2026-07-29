@@ -1,8 +1,9 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
-import { VueQueryPlugin, type VueQueryPluginOptions } from '@tanstack/vue-query'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import router from './router'
+import { setupQuerySync } from './utils/querySync'
 
 const app = createApp(App)
 
@@ -36,30 +37,30 @@ import { isAxiosError } from 'axios'
 const MAX_RETRIES = 6
 const HTTP_STATUS_TO_NOT_RETRY = [400, 401, 403, 404]
 
-const vueQueryOptions: VueQueryPluginOptions = {
-    queryClientConfig: {
-        defaultOptions: {
-            queries: {
-                gcTime: 1000 * 60 * 5, // 5 minutes (reduced from 24 hours to prevent memory leaks)
-                staleTime: 1000 * 30, // 30 seconds - queries older than this will refetch on window focus
-                retry: (failureCount, error) => {
-                    if (failureCount > MAX_RETRIES) {
-                        return false
-                    }
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            gcTime: 1000 * 60 * 5, // 5 minutes (reduced from 24 hours to prevent memory leaks)
+            staleTime: 1000 * 30, // 30 seconds - queries older than this will refetch on window focus
+            retry: (failureCount, error) => {
+                if (failureCount > MAX_RETRIES) {
+                    return false
+                }
 
-                    if (
-                        isAxiosError(error) &&
-                        HTTP_STATUS_TO_NOT_RETRY.includes(error.response?.status ?? 0)
-                    ) {
-                        return false
-                    }
+                if (
+                    isAxiosError(error) &&
+                    HTTP_STATUS_TO_NOT_RETRY.includes(error.response?.status ?? 0)
+                ) {
+                    return false
+                }
 
-                    return true
-                },
+                return true
             },
         },
     },
-}
+})
+
+setupQuerySync(queryClient)
 
 import { focusManager } from '@tanstack/vue-query'
 
@@ -78,5 +79,5 @@ focusManager.setEventListener((handleFocus) => {
 })
 
 app.use(router)
-app.use(VueQueryPlugin, vueQueryOptions)
+app.use(VueQueryPlugin, { queryClient })
 app.mount('#app')

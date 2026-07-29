@@ -1,7 +1,8 @@
 import { createApp } from 'vue'
 import Mini from './Mini.vue'
 import './style.css'
-import { VueQueryPlugin } from '@tanstack/vue-query'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import { setupQuerySync } from './utils/querySync'
 const app = createApp(Mini)
 
 import * as Sentry from '@sentry/electron/renderer'
@@ -20,5 +21,8 @@ Sentry.init({
     replaysOnErrorSampleRate: 1.0,
 })
 
-app.use(VueQueryPlugin)
+const queryClient = new QueryClient()
+setupQuerySync(queryClient)
+
+app.use(VueQueryPlugin, { queryClient })
 app.mount('#app')

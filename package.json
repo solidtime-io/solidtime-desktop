@@ -44,11 +44,12 @@
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
+        "@lucide/vue": "^1.24.0",
         "@miniben90/x-win": "^3.4.0",
         "@sentry/electron": "^7.11.0",
         "@sentry/vite-plugin": "^5.2.0",
-        "@solidtime/api": "^0.0.6",
-        "@solidtime/ui": "^0.0.21",
+        "@solidtime/api": "^0.0.7",
+        "@solidtime/ui": "^0.0.22",
         "better-sqlite3": "^12.9.0",
         "dbus-next": "^0.10.2",
         "drizzle-orm": "^0.45.2",
@@ -104,12 +105,6 @@
         }
     },
     "optionalDependencies": {
-        "@rollup/rollup-darwin-arm64": "*",
-        "@rollup/rollup-darwin-x64": "*",
-        "@rollup/rollup-linux-arm64-gnu": "*",
-        "@rollup/rollup-linux-x64-gnu": "*",
-        "@rollup/rollup-win32-arm64-msvc": "*",
-        "@rollup/rollup-win32-x64-msvc": "*",
         "@miniben90/x-win-darwin-arm64": "*",
         "@miniben90/x-win-darwin-universal": "*",
         "@miniben90/x-win-darwin-x64": "*",
@@ -117,6 +112,12 @@
         "@miniben90/x-win-linux-x64-musl": "*",
         "@miniben90/x-win-win32-arm64-msvc": "*",
         "@miniben90/x-win-win32-ia32-msvc": "*",
-        "@miniben90/x-win-win32-x64-msvc": "*"
+        "@miniben90/x-win-win32-x64-msvc": "*",
+        "@rollup/rollup-darwin-arm64": "*",
+        "@rollup/rollup-darwin-x64": "*",
+        "@rollup/rollup-linux-arm64-gnu": "*",
+        "@rollup/rollup-linux-x64-gnu": "*",
+        "@rollup/rollup-win32-arm64-msvc": "*",
+        "@rollup/rollup-win32-x64-msvc": "*"
     }
 }

@@ -9,6 +9,10 @@ export const apiClient = computed(() => {
 
     const axiosInstance = client.axios
 
+    // A request that never settles would jam the serialized time-entry
+    // mutation queue forever
+    axiosInstance.defaults.timeout = 30000
+
     axiosInstance.interceptors.request.use(
         (config) => {
             if (accessToken.value) {
