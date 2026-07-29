@@ -92,7 +92,9 @@ function registerIdleMonitorListeners() {
 }
 
 function transitionToIdle(idleStart: Dayjs) {
-    if (isIdle) return // Guard against double-fire (e.g. macOS suspend firing twice)
+    // Idempotent by design: the 1s polling loop and duplicate power events
+    // (e.g. macOS firing suspend twice) call this freely
+    if (isIdle) return
 
     isIdle = true
     idleStartTime = idleStart
@@ -110,7 +112,9 @@ function transitionToIdle(idleStart: Dayjs) {
 }
 
 function transitionToActive() {
-    if (!isIdle || !idleStartTime) return // Guard against double-fire
+    // Idempotent by design: the 1s polling loop and duplicate power events
+    // (e.g. resume + unlock-screen) call this freely
+    if (!isIdle || !idleStartTime) return
 
     const idleEnd = dayjs()
     const idleDurationSeconds = idleEnd.diff(idleStartTime, 'seconds')
@@ -129,6 +133,16 @@ function transitionToActive() {
     idleStartTime = null
     activeStartTime = idleEnd
 
+    // Power events transition to idle unconditionally, so enforce the
+    // threshold here: shorter gaps count as active time, no prompt
+    if (idleDurationSeconds < idleThreshold) {
+        saveActivityPeriod(capturedIdleStart, capturedIdleEnd, false)
+        return
+    }
+
+    // Always record the idle period if it is above the threshhold
+    saveActivityPeriod(capturedIdleStart, capturedIdleEnd, true)
+
     // Only show dialog if timer is running and we're not already waiting for a response
     // This prevents multiple dialogs from appearing
     if (isTimerRunning && !waitingForUserResponse) {
@@ -143,9 +157,6 @@ function transitionToActive() {
                 console.error('Error showing idle dialog:', error)
                 waitingForUserResponse = false
             })
-    } else if (!isTimerRunning) {
-        // If timer is not running, just save the idle period automatically
-        saveActivityPeriod(capturedIdleStart, capturedIdleEnd, true)
     }
 }
 
@@ -286,19 +297,9 @@ async function showIdleDialog(idleStartTime: string, idleEndTime: string, durati
         noLink: true,
     })
 
-    // Handle the user's choice
-    if (result.response === 0) {
-        // Keep Idle Time - save the idle period
-        await saveActivityPeriod(idleStartTime, idleEndTime, true)
-    } else if (result.response === 1) {
-        // Discard Idle Time - don't save anything
-        console.log('User discarded idle time')
-    } else if (result.response === 2) {
-        // Discard & Start New Timer - don't save idle time
-        console.log('User discarded idle time and will start new timer')
-    }
+    console.log('Idle dialog choice:', result.response)
 
-    // Send the user's choice to renderer
+    // The renderer handles the choice (keep, or backdate the stop / restart);
     mainWindow.webContents.send('idleDialogResponse', {
         choice: result.response,
         idleStartTime,
