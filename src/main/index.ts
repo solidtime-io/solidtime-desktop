@@ -2,9 +2,13 @@ import { app, BrowserWindow, ipcMain, dialog, systemPreferences, desktopCapturer
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/linux_icon.png?asset'
-import { initializeAutoUpdater, registerAutoUpdateListeners } from './autoUpdater'
+import {
+    initializeAutoUpdater,
+    registerAutoUpdateListeners,
+    disableInstallOnQuit,
+} from './autoUpdater'
 import { initializeTray, registerTrayListeners } from './tray'
-import { initializeMainWindow, registerMainWindowListeners } from './mainWindow'
+import { initializeMainWindow, registerMainWindowListeners, getMainWindow } from './mainWindow'
 import { initializeMiniWindow, registerMiniWindowListeners } from './miniWindow'
 import { registerDeeplinkListeners } from './deeplink'
 import { registerVueDevTools } from './devtools'
@@ -182,6 +186,22 @@ app.whenReady().then(async () => {
     })
 
     createWindow()
+
+    // handles shutdowns on windows and makes sure everything is stored
+    // and shut down correctly via before-quit
+    const mainWindow = getMainWindow()
+    mainWindow?.on('query-session-end', (event) => {
+        console.log('Windows session end query:', event.reasons)
+        event.preventDefault()
+        disableInstallOnQuit()
+        app.quit()
+    })
+    mainWindow?.on('session-end', () => {
+        console.log('Windows session ending')
+        disableInstallOnQuit()
+        app.quit()
+    })
+
     await initializeIdleMonitor()
     await initializeActivityTracker()
 

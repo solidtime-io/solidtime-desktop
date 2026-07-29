@@ -14,6 +14,14 @@ export function getAutoUpdater(): AppUpdater {
     return autoUpdater
 }
 
+/**
+ * Called by the OS-shutdown handlers before quitting: an installer spawned
+ * during shutdown could be killed mid-install, corrupting the app.
+ */
+export function disableInstallOnQuit() {
+    getAutoUpdater().autoInstallOnAppQuit = false
+}
+
 export function initializeAutoUpdater() {
     registerUpdaterLifecycleLogging()
 

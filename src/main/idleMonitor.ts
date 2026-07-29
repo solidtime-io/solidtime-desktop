@@ -1,5 +1,6 @@
-import { powerMonitor, ipcMain, dialog } from 'electron'
+import { app, powerMonitor, ipcMain, dialog } from 'electron'
 import { getMainWindow } from './mainWindow'
+import { disableInstallOnQuit } from './autoUpdater'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import duration from 'dayjs/plugin/duration'
@@ -192,6 +193,30 @@ function registerPowerMonitorEvents() {
         console.log('powerMonitor: screen unlocked')
         transitionToActive()
         restartIdleCheckInterval()
+    })
+
+    // macOS only: fast user switching resigns the session without locking
+    powerMonitor.on('user-did-resign-active', () => {
+        if (!idleDetectionEnabled) return
+        console.log('powerMonitor: session resigned active')
+        clearIdleCheckInterval()
+        transitionToIdle(dayjs())
+    })
+
+    powerMonitor.on('user-did-become-active', () => {
+        if (!idleDetectionEnabled) return
+        console.log('powerMonitor: session became active')
+        transitionToActive()
+        restartIdleCheckInterval()
+    })
+
+    // handles shutdowns on Linux/macOS and makes sure everything is stored
+    // and shut down correctly via before-quit
+    powerMonitor.on('shutdown', (event?: Electron.Event) => {
+        console.log('powerMonitor: system shutdown')
+        event?.preventDefault()
+        disableInstallOnQuit()
+        app.quit()
     })
 }
 
