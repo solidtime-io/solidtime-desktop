@@ -64,12 +64,12 @@ const expandedDateRange = computed(() => {
 
 const { data: timeEntryResponse, isLoading: timeEntriesLoading } = useQuery<TimeEntryResponse>({
     queryKey: computed(() => [
-        'timeEntry',
+        'timeEntries',
+        currentOrganizationId.value,
         'calendar',
         {
             start: expandedDateRange.value.start,
             end: expandedDateRange.value.end,
-            organization: currentOrganizationId.value,
         },
     ]),
     enabled: enableCalendarQuery,
@@ -127,7 +127,9 @@ const clients = computed(() => clientsResponse.value?.data ?? [])
 const queryClient = useQueryClient()
 
 onActivated(() => {
-    queryClient.invalidateQueries({ queryKey: ['timeEntry', 'calendar'] })
+    queryClient.invalidateQueries({
+        queryKey: ['timeEntries', currentOrganizationId.value, 'calendar'],
+    })
 })
 
 async function createTimeEntry(entry: Omit<TimeEntry, 'id' | 'organization_id' | 'user_id'>) {
@@ -150,7 +152,8 @@ async function createTimeEntry(entry: Omit<TimeEntry, 'id' | 'organization_id' |
             params: { organization: currentOrganizationId.value },
         }
     )
-    queryClient.invalidateQueries({ queryKey: ['timeEntry', 'calendar'] })
+    queryClient.invalidateQueries({ queryKey: ['timeEntries', currentOrganizationId.value] })
+    queryClient.invalidateQueries({ queryKey: ['currentTimeEntry'] })
 }
 
 async function updateTimeEntry(entry: TimeEntry) {
@@ -176,7 +179,8 @@ async function updateTimeEntry(entry: TimeEntry) {
             },
         }
     )
-    queryClient.invalidateQueries({ queryKey: ['timeEntry', 'calendar'] })
+    queryClient.invalidateQueries({ queryKey: ['timeEntries', currentOrganizationId.value] })
+    queryClient.invalidateQueries({ queryKey: ['currentTimeEntry'] })
 }
 
 async function deleteTimeEntry(timeEntryId: string) {
@@ -189,7 +193,8 @@ async function deleteTimeEntry(timeEntryId: string) {
             timeEntry: timeEntryId,
         },
     })
-    queryClient.invalidateQueries({ queryKey: ['timeEntry', 'calendar'] })
+    queryClient.invalidateQueries({ queryKey: ['timeEntries', currentOrganizationId.value] })
+    queryClient.invalidateQueries({ queryKey: ['currentTimeEntry'] })
 }
 
 const projectCreateMutation = useProjectCreateMutation()
@@ -217,7 +222,7 @@ function onDatesChange({ start, end }: { start: Dayjs; end: Dayjs }) {
 
 function onRefresh() {
     queryClient.invalidateQueries({
-        queryKey: ['timeEntry', 'calendar'],
+        queryKey: ['timeEntries', currentOrganizationId.value, 'calendar'],
     })
 }
 
