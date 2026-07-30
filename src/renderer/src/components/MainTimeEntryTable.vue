@@ -45,6 +45,7 @@ import { fromError } from 'zod-validation-error'
 import { apiClient } from '../utils/api'
 import { updateTrayState } from '../utils/tray'
 import { isTrayTimerActivated } from '../utils/settings'
+import { groupSimilarTimeEntriesSetting } from '../utils/timeEntryGrouping.ts'
 import { useTimer, getLastWorkTimeEntry } from '../utils/useTimer.ts'
 import { useBreaksEnabled } from '../utils/organization.ts'
 import { useRouter } from 'vue-router'
@@ -503,6 +504,7 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     :createTimeEntry="createTimeEntry"
                     :createTag
                     :fixInCalendar="goToCalendarDay"
+                    :groupSimilarTimeEntries="groupSimilarTimeEntriesSetting"
                     :timeEntries="timeEntries"></TimeEntryGroupedTable>
                 <div v-if="timeEntries && timeEntries.length === 0" class="text-center pt-12">
                     <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>

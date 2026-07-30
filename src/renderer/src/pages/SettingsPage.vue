@@ -17,6 +17,7 @@ import {
     SelectValue,
 } from '@solidtime/ui'
 import { themeSetting } from '../utils/theme.ts'
+import { groupSimilarTimeEntriesSetting } from '../utils/timeEntryGrouping.ts'
 import { usePreferredColorScheme } from '@vueuse/core'
 import { logout } from '../utils/oauth.ts'
 import {
@@ -399,6 +400,12 @@ watch(activityTrackingEnabled, (enabled) => {
                             System default: {{ preferredColor }}
                         </span>
                     </div>
+                    <label class="flex items-center">
+                        <Checkbox
+                            v-model:checked="groupSimilarTimeEntriesSetting"
+                            name="group_similar_time_entries" />
+                        <span class="ms-2 text-sm">Group similar time entries</span>
+                    </label>
                     <label class="flex items-center">
                         <Checkbox v-model:checked="isWidgetActivated" name="remember" />
                         <span class="ms-2 text-sm">Show Timetracker Widget</span>

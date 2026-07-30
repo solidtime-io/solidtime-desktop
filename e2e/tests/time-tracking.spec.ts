@@ -58,9 +58,10 @@ test.describe('Time tracking', () => {
 
         const createRequest = await createRequestPromise
         const body = createRequest.postDataJSON()
-        expect(body.description).toBe('Implement navigation component')
+        // 'Code review' is the most recent work entry (the API returns newest-first)
+        expect(body.description).toBe('Code review')
         expect(body.project_id).not.toBeNull()
 
-        await expect(descriptionInput).toHaveValue('Implement navigation component')
+        await expect(descriptionInput).toHaveValue('Code review')
     })
 })

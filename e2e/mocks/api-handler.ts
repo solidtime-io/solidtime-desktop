@@ -144,7 +144,14 @@ export async function setupApiMocks(page: Page, sharedState?: MockState): Promis
         // /api/v1/organizations/:org/time-entries (collection)
         if (pathname.match(/\/organizations\/[^/]+\/time-entries$/)) {
             if (method === 'GET') {
-                return jsonResponse(route, { data: state.timeEntries })
+                // The real API returns entries newest-first and pages via the `end`
+                // param; without honoring both, the infinite query re-fetches
+                // overlapping windows and entries duplicate
+                const end = new URL(url).searchParams.get('end')
+                const data = state.timeEntries
+                    .filter((entry) => !end || entry.start < end)
+                    .sort((a, b) => (a.start < b.start ? 1 : -1))
+                return jsonResponse(route, { data })
             }
             if (method === 'POST') {
                 // The real server generates its own id — ignore any id sent by the client
