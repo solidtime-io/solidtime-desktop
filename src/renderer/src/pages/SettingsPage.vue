@@ -60,6 +60,7 @@ const { data } = useQuery({
     queryFn: () => getMe(),
 })
 
+const appVersion = ref('')
 const showUpdateNotAvailable = ref(false)
 const checkingForUpdate = ref(false)
 const downloadingUpdate = ref(false)
@@ -287,6 +288,8 @@ function confirmDeleteIconCache() {
 }
 
 onMounted(async () => {
+    appVersion.value = await window.electronAPI.getAppVersion()
+
     // Check platform support for activity tracking
     const support = await window.electronAPI.getActivityTrackingSupport()
     activityTrackingSupported.value = support.supported
@@ -564,6 +567,9 @@ watch(activityTrackingEnabled, (enabled) => {
             <div
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
                 <div class="mb-4 text-lg font-medium">Updates</div>
+                <div v-if="appVersion" class="mb-4 text-sm text-muted-foreground">
+                    Current version: {{ appVersion }}
+                </div>
                 <div class="flex items-center space-x-4">
                     <PrimaryButton v-if="updateReadyToInstall" @click="installUpdate">
                         Restart & Update

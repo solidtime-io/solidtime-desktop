@@ -156,6 +156,8 @@ app.whenReady().then(async () => {
     // Activity tracking platform support check
     ipcMain.handle('getActivityTrackingSupport', () => getActivityTrackingSupport())
 
+    ipcMain.handle('getAppVersion', () => app.getVersion())
+
     // Screen recording permission handlers
     ipcMain.handle('checkScreenRecordingPermission', async () => {
         if (process.platform === 'darwin') {

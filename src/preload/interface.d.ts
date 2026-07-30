@@ -91,6 +91,7 @@ export interface IElectronAPI {
         endDate: string
     ) => Promise<{ success: boolean; error?: string }>
     setTitleBarOverlay: (theme: 'dark' | 'light') => void
+    getAppVersion: () => Promise<string>
     getXWinExtensionStatus: () => Promise<XWinExtensionStatus>
     installXWinExtension: () => Promise<XWinExtensionActionResult>
     enableXWinExtension: () => Promise<XWinExtensionActionResult>

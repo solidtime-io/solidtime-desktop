@@ -83,6 +83,8 @@ const {
 
 const meFailed = computed(() => meError.value || meFailureCount.value >= 2)
 
+const appVersion = ref('')
+
 const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 window.getTimezoneSetting = () => meResponse.value?.data?.timezone || deviceTimezone
 window.getWeekStartSetting = () => meResponse.value?.data?.week_start || 'monday'
@@ -106,6 +108,8 @@ watch(
 onMounted(async () => {
     initializeAuth(queryClient)
     useTheme()
+
+    appVersion.value = await window.electronAPI.getAppVersion()
 
     // Initialize settings from database
     await initializeSettings()
@@ -272,6 +276,9 @@ async function retryMe() {
                         <Cog6ToothIcon class="w-4"></Cog6ToothIcon>
                         <span> Instance Settings </span>
                     </button>
+                    <span v-if="appVersion" class="text-xs text-text-tertiary opacity-50">
+                        Version {{ appVersion }}
+                    </span>
                 </div>
             </div>
         </div>
