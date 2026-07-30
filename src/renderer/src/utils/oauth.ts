@@ -7,8 +7,11 @@ import { emptyTimeEntry } from './timeEntries'
 
 const challenge = ref('')
 const state = ref('')
-export const endpoint = useStorage('instance_endpoint', 'https://app.solidtime.io')
-export const clientId = useStorage('instance_client_id', '9c994748-c593-4a6d-951b-6849c829bc4e')
+export const defaultEndpoint = 'https://app.solidtime.io'
+export const defaultClientId = '9c994748-c593-4a6d-951b-6849c829bc4e'
+
+export const endpoint = useStorage('instance_endpoint', defaultEndpoint)
+export const clientId = useStorage('instance_client_id', defaultClientId)
 
 const redirectUrl = 'solidtime://oauth/callback'
 
@@ -32,11 +35,20 @@ export const refreshToken = useStorage('refresh_token', localStorage.getItem('re
 
 export const isLoggedIn = computed(() => !!accessToken.value)
 
-let refreshPromise: Promise<void> | null = null
+interface ActiveRefresh {
+    promise: Promise<void>
+    controller: AbortController
+}
+
+let activeRefresh: ActiveRefresh | null = null
+
+function isActiveRefresh(controller: AbortController): boolean {
+    return activeRefresh?.controller === controller
+}
 
 export async function refreshAccessToken(): Promise<void> {
-    if (refreshPromise) {
-        return refreshPromise
+    if (activeRefresh) {
+        return activeRefresh.promise
     }
 
     const currentRefreshToken = refreshToken.value
@@ -49,7 +61,8 @@ export async function refreshAccessToken(): Promise<void> {
         throw new Error('No refresh token available - user logged out')
     }
 
-    refreshPromise = (async () => {
+    const controller = new AbortController()
+    const pendingRefresh = (async () => {
         try {
             const data = {
                 grant_type: 'refresh_token',
@@ -59,6 +72,7 @@ export async function refreshAccessToken(): Promise<void> {
 
             const response = await fetch(endpoint.value + '/oauth/token', {
                 method: 'POST',
+                signal: controller.signal,
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
@@ -75,21 +89,31 @@ export async function refreshAccessToken(): Promise<void> {
             }
 
             const responseData = (await response.json()) as OAuthResponse
+            if (controller.signal.aborted) {
+                throw new DOMException('Token refresh was cancelled', 'AbortError')
+            }
             accessToken.value = responseData.access_token
             refreshToken.value = responseData.refresh_token
         } catch (error) {
-            // Refresh failed, clear tokens
-            accessToken.value = ''
-            refreshToken.value = ''
-            window.localStorage.removeItem('refresh_token')
-            window.localStorage.removeItem('verifier')
+            // An aborted/superseded refresh must not clear a newer auth session.
+            if (!controller.signal.aborted && isActiveRefresh(controller)) {
+                accessToken.value = ''
+                refreshToken.value = ''
+                window.localStorage.removeItem('refresh_token')
+                window.localStorage.removeItem('verifier')
+            }
             throw error
-        } finally {
-            refreshPromise = null
         }
     })()
 
-    return refreshPromise
+    activeRefresh = { promise: pendingRefresh, controller }
+    try {
+        await pendingRefresh
+    } finally {
+        if (isActiveRefresh(controller)) {
+            activeRefresh = null
+        }
+    }
 }
 
 function sha256(plain: string) {
@@ -164,6 +188,8 @@ export async function initializeAuth(queryClient: QueryClient) {
 }
 
 export async function logout(queryClient: QueryClient) {
+    activeRefresh?.controller.abort()
+    activeRefresh = null
     queryClient.clear()
     useStorage('currentTimeEntry', { ...emptyTimeEntry }).value = null
     useStorage('lastTimeEntry', { ...emptyTimeEntry }).value = null

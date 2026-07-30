@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PrimaryButton, time } from '@solidtime/ui'
+import { PrimaryButton, SecondaryButton, time } from '@solidtime/ui'
 import { Cog6ToothIcon } from '@heroicons/vue/16/solid'
 
 declare global {
@@ -13,7 +13,7 @@ import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
 import { useQueryClient, useQuery } from '@tanstack/vue-query'
 
 import { onMounted, provide, ref, watchEffect, watch, computed } from 'vue'
-import { initializeAuth, isLoggedIn, openLoginWindow } from './utils/oauth.ts'
+import { endpoint, initializeAuth, isLoggedIn, logout, openLoginWindow } from './utils/oauth.ts'
 
 import InstanceSettingsModal from './components/InstanceSettingsModal.vue'
 import { hideMiniWindow, showMiniWindow } from './utils/window.ts'
@@ -70,11 +70,18 @@ watchEffect(() => {
 
 // Fetch user data for timezone and week start settings. Enabled only once
 // logged in — an unauthenticated 401 is never retried.
-const { data: meResponse } = useQuery({
+const {
+    data: meResponse,
+    isError: meError,
+    failureCount: meFailureCount,
+    refetch: refetchMe,
+} = useQuery({
     queryKey: ['me'],
     queryFn: () => getMe(),
     enabled: isLoggedIn,
 })
+
+const meFailed = computed(() => meError.value || meFailureCount.value >= 2)
 
 const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 window.getTimezoneSetting = () => meResponse.value?.data?.timezone || deviceTimezone
@@ -162,16 +169,29 @@ const isMac = window.electron.process.platform === 'darwin'
 const keys = useMagicKeys()
 const cmdComma = keys['Cmd+,']
 whenever(cmdComma, () => {
-    if (isLoggedIn.value) {
+    if (isLoggedIn.value && isMeLoaded.value) {
         router.push('/settings')
     } else {
         showInstanceSettingsModal.value = true
     }
 })
+
+function onConnectionErrorLogout() {
+    logout(queryClient)
+    router.push('/time')
+}
+
+async function retryMe() {
+    await queryClient.cancelQueries({ queryKey: ['me'], exact: true })
+    await refetchMe()
+}
 </script>
 
 <template>
     <AutoUpdaterOverlay></AutoUpdaterOverlay>
+    <InstanceSettingsModal
+        :show="showInstanceSettingsModal"
+        @close="showInstanceSettingsModal = false"></InstanceSettingsModal>
     <div class="flex h-screen">
         <div class="flex-1 flex flex-col">
             <div
@@ -213,7 +233,22 @@ whenever(cmdComma, () => {
                 </div>
             </div>
             <div v-else-if="isLoggedIn" class="flex-1 flex items-center justify-center">
-                <div class="text-text-tertiary font-medium text-sm">Loading…</div>
+                <div v-if="meFailed" class="flex flex-col items-center space-y-4 px-6">
+                    <p class="text-text-primary font-medium text-sm">
+                        Could not connect to the server
+                    </p>
+                    <p class="text-center text-text-tertiary text-sm max-w-sm break-all">
+                        {{ endpoint }}
+                    </p>
+                    <div class="flex items-center space-x-2">
+                        <PrimaryButton @click="retryMe">Retry</PrimaryButton>
+                        <SecondaryButton @click="showInstanceSettingsModal = true">
+                            Instance Settings
+                        </SecondaryButton>
+                        <SecondaryButton @click="onConnectionErrorLogout">Log out</SecondaryButton>
+                    </div>
+                </div>
+                <div v-else class="text-text-tertiary font-medium text-sm">Loading…</div>
             </div>
             <div v-else class="flex-1">
                 <div class="flex flex-col space-y-6 py-12 items-center justify-center">
@@ -237,9 +272,6 @@ whenever(cmdComma, () => {
                         <Cog6ToothIcon class="w-4"></Cog6ToothIcon>
                         <span> Instance Settings </span>
                     </button>
-                    <InstanceSettingsModal
-                        :show="showInstanceSettingsModal"
-                        @close="showInstanceSettingsModal = false"></InstanceSettingsModal>
                 </div>
             </div>
         </div>
