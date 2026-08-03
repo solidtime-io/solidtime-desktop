@@ -1,21 +1,5 @@
-import type { WindowActivity, WindowActivityStats } from '../../../preload/interface'
+import type { WindowActivityStats } from '../../../preload/interface'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
-
-/**
- * Get window activities for a specific date range
- */
-export async function getWindowActivities(
-    startDate: string,
-    endDate: string
-): Promise<WindowActivity[]> {
-    try {
-        const activities = await window.electronAPI.getWindowActivities(startDate, endDate)
-        return activities || []
-    } catch (error) {
-        console.error('Failed to get window activities:', error)
-        return []
-    }
-}
 
 /**
  * Get window activity statistics (aggregated by app/url) for a date range

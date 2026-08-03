@@ -5,6 +5,11 @@ import { gte, lte, and } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
 import { getCurrentActivityPeriod } from './idleMonitor'
 
+/** Normalizes timestamps for lexicographical comparison with stored UTC values. */
+function toUtcIso(dateString: string): string {
+    return new Date(dateString).toISOString()
+}
+
 /**
  * Deletes all activity periods from the database
  */
@@ -31,7 +36,12 @@ async function deleteActivityPeriodsInRange(
     try {
         await db
             .delete(activityPeriods)
-            .where(and(gte(activityPeriods.start, startDate), lte(activityPeriods.end, endDate)))
+            .where(
+                and(
+                    gte(activityPeriods.end, toUtcIso(startDate)),
+                    lte(activityPeriods.start, toUtcIso(endDate))
+                )
+            )
         return { success: true }
     } catch (error) {
         console.error('Failed to delete activity periods in range:', error)
@@ -108,8 +118,8 @@ async function fetchAllWindowActivitiesInRange(
             .from(windowActivities)
             .where(
                 and(
-                    gte(windowActivities.timestamp, startDate),
-                    lte(windowActivities.timestamp, endDate)
+                    gte(windowActivities.end, toUtcIso(startDate)),
+                    lte(windowActivities.timestamp, toUtcIso(endDate))
                 )
             )
 

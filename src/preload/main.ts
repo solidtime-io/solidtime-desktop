@@ -43,8 +43,6 @@ if (process.contextIsolated || true) {
             updateActivityTrackingEnabled: (enabled: boolean) =>
                 ipcRenderer.invoke('updateActivityTrackingEnabled', enabled),
             timerStateChanged: (running: boolean) => ipcRenderer.send('timerStateChanged', running),
-            getWindowActivities: (startDate: string, endDate: string) =>
-                ipcRenderer.invoke('getWindowActivities', startDate, endDate),
             getWindowActivityStats: (startDate: string, endDate: string) =>
                 ipcRenderer.invoke('getWindowActivityStats', startDate, endDate),
             getAppIcon: (appName: string) => ipcRenderer.invoke('getAppIcon', appName),

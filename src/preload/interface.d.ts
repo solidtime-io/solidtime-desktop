@@ -6,16 +6,6 @@ export interface AppSettings {
     activityTrackingEnabled: boolean
 }
 
-export interface WindowActivity {
-    id: number
-    timestamp: string
-    appName: string
-    windowTitle: string
-    url: string | null
-    processId: number | null
-    createdAt: string
-}
-
 export interface WindowActivityStats {
     appName: string
     url: string | null
@@ -73,7 +63,6 @@ export interface IElectronAPI {
     updateSettings: (
         settings: Partial<AppSettings>
     ) => Promise<{ success: boolean; data?: AppSettings; error?: string }>
-    getWindowActivities: (startDate: string, endDate: string) => Promise<WindowActivity[]>
     getWindowActivityStats: (startDate: string, endDate: string) => Promise<WindowActivityStats[]>
     getAppIcon: (appName: string) => Promise<string | null>
     getIcons: (names: string[]) => Promise<Record<string, string | null>>

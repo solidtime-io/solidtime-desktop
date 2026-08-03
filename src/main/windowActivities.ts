@@ -1,8 +1,15 @@
 import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { windowActivities } from './db/schema'
-import { and, gte, lte, sql, ne } from 'drizzle-orm'
+import { and, gte, lte, ne } from 'drizzle-orm'
 import { resetActivityStartTime, getCurrentActivity } from './activityTracker'
+import { getIdleIntervals } from './idlePeriods'
+import { aggregateActivityStats, type RawActivityRow } from './windowActivityStats'
+
+/** Normalizes timestamps for lexicographical comparison with stored UTC values. */
+function toUtcIso(dateString: string): string {
+    return new Date(dateString).toISOString()
+}
 
 /**
  * Deletes all window activities from the database
@@ -29,12 +36,14 @@ async function deleteWindowActivitiesInRange(
     endDate: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
+        // Overlap predicate: rows straddling a range boundary are deleted in
+        // full — over-deleting beats leaving partial data after a privacy wipe.
         await db
             .delete(windowActivities)
             .where(
                 and(
-                    gte(windowActivities.timestamp, startDate),
-                    lte(windowActivities.timestamp, endDate)
+                    gte(windowActivities.end, toUtcIso(startDate)),
+                    lte(windowActivities.timestamp, toUtcIso(endDate))
                 )
             )
         console.log(`Window activities deleted for range ${startDate} - ${endDate}`)
@@ -52,75 +61,46 @@ async function deleteWindowActivitiesInRange(
  * Registers IPC handlers for window activities
  */
 export function registerWindowActivitiesHandlers() {
-    // Get window activities for a date range
-    ipcMain.handle('getWindowActivities', async (_event, startDate: string, endDate: string) => {
-        try {
-            const activities = await db
-                .select()
-                .from(windowActivities)
-                .where(
-                    and(
-                        gte(windowActivities.timestamp, startDate),
-                        lte(windowActivities.timestamp, endDate),
-                        ne(windowActivities.appName, 'Unknown')
-                    )
-                )
-                .orderBy(windowActivities.timestamp)
-
-            return activities
-        } catch (error) {
-            console.error('Failed to get window activities:', error)
-            return []
-        }
-    })
-
-    // Get aggregated window activity statistics for a date range
+    // Get activity statistics with range clipping and idle time removed.
     ipcMain.handle('getWindowActivityStats', async (_event, startDate: string, endDate: string) => {
         try {
-            const stats = await db
+            const rangeStartMs = new Date(startDate).getTime()
+            const rangeEndMs = new Date(endDate).getTime()
+            const rangeStartIso = new Date(rangeStartMs).toISOString()
+            const rangeEndIso = new Date(rangeEndMs).toISOString()
+
+            const rows: RawActivityRow[] = await db
                 .select({
+                    timestamp: windowActivities.timestamp,
+                    durationSeconds: windowActivities.durationSeconds,
                     appName: windowActivities.appName,
                     url: windowActivities.url,
                     windowTitle: windowActivities.windowTitle,
-                    count: sql<number>`SUM(${windowActivities.durationSeconds})`,
                 })
                 .from(windowActivities)
                 .where(
                     and(
-                        gte(windowActivities.timestamp, startDate),
-                        lte(windowActivities.timestamp, endDate),
+                        gte(windowActivities.end, rangeStartIso),
+                        lte(windowActivities.timestamp, rangeEndIso),
                         ne(windowActivities.appName, 'Unknown')
                     )
                 )
-                .groupBy(
-                    windowActivities.appName,
-                    windowActivities.url,
-                    windowActivities.windowTitle
-                )
-                .orderBy(sql`SUM(${windowActivities.durationSeconds}) DESC`)
 
-            // Include the current in-progress activity if it falls within the date range
+            // Include the current in-progress activity.
             const current = getCurrentActivity()
-            if (current && current.timestamp >= startDate && current.timestamp <= endDate) {
-                const existing = stats.find(
-                    (s) =>
-                        s.appName === current.appName &&
-                        s.url === current.url &&
-                        s.windowTitle === current.windowTitle
-                )
-                if (existing) {
-                    existing.count += current.durationSeconds
-                } else {
-                    stats.push({
-                        appName: current.appName,
-                        url: current.url,
-                        windowTitle: current.windowTitle,
-                        count: current.durationSeconds,
-                    })
-                }
+            if (current) {
+                rows.push({
+                    timestamp: current.timestamp,
+                    durationSeconds: current.durationSeconds,
+                    appName: current.appName,
+                    url: current.url,
+                    windowTitle: current.windowTitle,
+                })
             }
 
-            return stats
+            const idleIntervals = await getIdleIntervals(rangeStartMs, rangeEndMs)
+
+            return aggregateActivityStats(rows, idleIntervals, rangeStartMs, rangeEndMs)
         } catch (error) {
             console.error('Failed to get window activity stats:', error)
             return []

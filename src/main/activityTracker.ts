@@ -2,7 +2,7 @@ import { db } from './db/client'
 import { windowActivities, validateNewWindowActivity } from './db/schema'
 import { getAppSettings } from './settings'
 import { hasScreenRecordingPermission } from './permissions'
-import { ipcMain } from 'electron'
+import { ipcMain, powerMonitor } from 'electron'
 import { logger } from './logger'
 import { isSameWindowActivity, type ActivityBackend, type WindowInfo } from './activity/backend'
 
@@ -10,6 +10,8 @@ let activityTrackingEnabled = false
 let backend: ActivityBackend | null = null
 let lastWindowInfo: WindowInfo | null = null
 let currentActivityStartTime: Date | null = null
+let trackingPaused = false
+let powerEventsRegistered = false
 
 /**
  * Resets the current activity start time to now.
@@ -38,6 +40,50 @@ function sanitizeUrl(url: string | undefined): string | null {
         // If URL parsing fails, return null to avoid storing invalid data
         return null
     }
+}
+
+/** Closes the current activity and pauses tracking. */
+export async function pauseActivityTracking(pauseTime: Date = new Date()): Promise<void> {
+    if (trackingPaused) return
+    trackingPaused = true
+
+    // Clear synchronously so resume can start a new activity while this one is saved.
+    const windowInfo = lastWindowInfo
+    const startTime = currentActivityStartTime
+    currentActivityStartTime = null
+
+    if (windowInfo && startTime && activityTrackingEnabled) {
+        try {
+            await saveWindowActivity(windowInfo, startTime, pauseTime)
+        } catch (error) {
+            logger.error('Failed to save window activity on pause:', error)
+        }
+    }
+    logger.debug('Activity tracking paused')
+}
+
+/** Resumes tracking without attributing the paused interval to a window. */
+export function resumeActivityTracking(): void {
+    if (!trackingPaused) return
+    trackingPaused = false
+
+    if (lastWindowInfo) {
+        currentActivityStartTime = new Date()
+    }
+    logger.debug('Activity tracking resumed')
+}
+
+/** Tracks power state independently of the optional idle monitor. */
+function registerPowerEventListeners(): void {
+    if (powerEventsRegistered) return
+    powerEventsRegistered = true
+
+    powerMonitor.on('suspend', () => void pauseActivityTracking())
+    powerMonitor.on('lock-screen', () => void pauseActivityTracking())
+    powerMonitor.on('user-did-resign-active', () => void pauseActivityTracking())
+    powerMonitor.on('resume', () => resumeActivityTracking())
+    powerMonitor.on('unlock-screen', () => resumeActivityTracking())
+    powerMonitor.on('user-did-become-active', () => resumeActivityTracking())
 }
 
 /**
@@ -85,6 +131,7 @@ export async function initializeActivityTracker() {
 
         // Register IPC listeners
         registerActivityTrackerListeners()
+        registerPowerEventListeners()
     } catch (error) {
         logger.error('Failed to initialize activity tracker:', error)
     }
@@ -125,6 +172,7 @@ export async function startActivityTracking(): Promise<void> {
     }
 
     logger.info('Starting activity tracking...')
+    trackingPaused = false
 
     let chosen: ActivityBackend
     try {
@@ -166,6 +214,12 @@ async function handleWindowChange(windowInfo: WindowInfo): Promise<void> {
         return
     }
 
+    // Remember focus changes while paused without starting the clock.
+    if (trackingPaused) {
+        lastWindowInfo = windowInfo
+        return
+    }
+
     if (lastWindowInfo && currentActivityStartTime && activityTrackingEnabled) {
         const now = new Date()
         try {
@@ -201,6 +255,9 @@ async function saveWindowActivity(
 
         const activity = {
             timestamp,
+            // Derived from the floored duration so end - timestamp always
+            // equals durationSeconds, matching the migration backfill.
+            end: new Date(startTime.getTime() + durationSeconds * 1000).toISOString(),
             durationSeconds,
             appName: windowInfo.info.name || windowInfo.info.execName || 'Unknown',
             windowTitle: windowInfo.title || 'Untitled',
@@ -296,6 +353,7 @@ export async function stopActivityTracking(): Promise<void> {
 
     lastWindowInfo = null
     currentActivityStartTime = null
+    trackingPaused = false
 
     logger.info('Activity tracking stopped')
 }

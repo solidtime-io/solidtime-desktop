@@ -15,6 +15,13 @@
             "when": 1774893874507,
             "tag": "0001_familiar_infant_terrible",
             "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "6",
+            "when": 1785753532259,
+            "tag": "0002_mature_giant_man",
+            "breakpoints": true
         }
     ]
 }

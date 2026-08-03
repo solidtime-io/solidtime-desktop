@@ -91,6 +91,7 @@ export const windowActivities = sqliteTable(
     {
         id: integer('id').primaryKey({ autoIncrement: true }),
         timestamp: text('timestamp').notNull(), // ISO 8601 UTC timestamp (start time of activity)
+        end: text('end').notNull(), // ISO 8601 UTC timestamp (timestamp + duration), kept queryable for range overlap
         durationSeconds: integer('duration_seconds').notNull(), // Duration in seconds
         appName: text('app_name').notNull(), // Application name (e.g., "Google Chrome", "Visual Studio Code")
         windowTitle: text('window_title').notNull(), // Window title
@@ -100,7 +101,10 @@ export const windowActivities = sqliteTable(
             .notNull()
             .$defaultFn(() => new Date().toISOString()),
     },
-    (table) => [index('idx_window_activities_timestamp').on(table.timestamp)]
+    (table) => [
+        index('idx_window_activities_timestamp').on(table.timestamp),
+        index('idx_window_activities_end').on(table.end),
+    ]
 )
 
 export type WindowActivity = typeof windowActivities.$inferSelect
@@ -112,6 +116,16 @@ export type NewWindowActivity = typeof windowActivities.$inferInsert
 export function validateNewWindowActivity(activity: NewWindowActivity): void {
     if (!isValidUTCTimestamp(activity.timestamp)) {
         throw new Error(`Invalid timestamp format. Expected UTC ISO 8601: ${activity.timestamp}`)
+    }
+
+    if (!isValidUTCTimestamp(activity.end)) {
+        throw new Error(`Invalid end timestamp format. Expected UTC ISO 8601: ${activity.end}`)
+    }
+
+    if (new Date(activity.end).getTime() <= new Date(activity.timestamp).getTime()) {
+        throw new Error(
+            `End must be after start. Start: ${activity.timestamp}, End: ${activity.end}`
+        )
     }
 
     if (typeof activity.durationSeconds !== 'number' || activity.durationSeconds < 0) {

@@ -1,17 +1,10 @@
 import { app, powerMonitor, ipcMain, dialog } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { disableInstallOnQuit } from './autoUpdater'
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
-import duration from 'dayjs/plugin/duration'
-import type { Dayjs } from 'dayjs'
 import { db } from './db/client'
 import { activityPeriods, validateNewActivityPeriod } from './db/schema'
 import { getAppSettings } from './settings'
-
-// Configure dayjs for main process
-dayjs.extend(utc)
-dayjs.extend(duration)
+import { pauseActivityTracking, resumeActivityTracking } from './activityTracker'
 
 // Helper functions for formatting (replicate UI package functionality for main process)
 function formatDuration(seconds: number): string {
@@ -28,14 +21,15 @@ function formatDuration(seconds: number): string {
     }
 }
 
+/** Formats an ISO timestamp as local HH:mm:ss for the idle dialog. */
 function formatTime(isoString: string): string {
-    return dayjs(isoString).format('HH:mm:ss')
+    return new Date(isoString).toTimeString().slice(0, 8)
 }
 
 let idleCheckInterval: NodeJS.Timeout | null = null
 let isIdle = false
-let idleStartTime: Dayjs | null = null
-let activeStartTime: Dayjs | null = null
+let idleStartTime: Date | null = null
+let activeStartTime: Date | null = null
 let idleThreshold = 300
 let idleDetectionEnabled = true
 let isTimerRunning = false
@@ -92,7 +86,7 @@ function registerIdleMonitorListeners() {
     })
 }
 
-function transitionToIdle(idleStart: Dayjs) {
+function transitionToIdle(idleStart: Date) {
     // Idempotent by design: the 1s polling loop and duplicate power events
     // (e.g. macOS firing suspend twice) call this freely
     if (isIdle) return
@@ -102,12 +96,15 @@ function transitionToIdle(idleStart: Dayjs) {
 
     console.log(`System became idle at ${idleStartTime.toISOString()}`)
 
+    // idleStart may be retroactive (now - system idle time).
+    void pauseActivityTracking(idleStart)
+
     // Save the active period that just ended
     if (activeStartTime) {
         // Ensure the end time is not before the start time due to timing precision
-        const endTime = idleStartTime.isBefore(activeStartTime) ? activeStartTime : idleStartTime
+        const endTime = idleStartTime < activeStartTime ? activeStartTime : idleStartTime
 
-        saveActivityPeriod(activeStartTime.utc().format(), endTime.utc().format(), false)
+        saveActivityPeriod(activeStartTime.toISOString(), endTime.toISOString(), false)
         activeStartTime = null
     }
 }
@@ -117,22 +114,23 @@ function transitionToActive() {
     // (e.g. resume + unlock-screen) call this freely
     if (!isIdle || !idleStartTime) return
 
-    const idleEnd = dayjs()
-    const idleDurationSeconds = idleEnd.diff(idleStartTime, 'seconds')
+    const idleEnd = new Date()
+    const idleDurationSeconds = Math.floor((idleEnd.getTime() - idleStartTime.getTime()) / 1000)
 
     console.log(
         `System became active at ${idleEnd.toISOString()}, idle duration: ${idleDurationSeconds}s`
     )
 
     // Capture the idle period info before resetting state
-    const capturedIdleStart = idleStartTime.utc().format()
-    const capturedIdleEnd = idleEnd.utc().format()
+    const capturedIdleStart = idleStartTime.toISOString()
+    const capturedIdleEnd = idleEnd.toISOString()
     const capturedDuration = idleDurationSeconds
 
     // Reset idle state and resume activity tracking immediately
     isIdle = false
     idleStartTime = null
     activeStartTime = idleEnd
+    resumeActivityTracking()
 
     // Power events transition to idle unconditionally, so enforce the
     // threshold here: shorter gaps count as active time, no prompt
@@ -171,14 +169,14 @@ function registerPowerMonitorEvents() {
         // Stop the polling interval BEFORE transitioning to idle
         // to prevent a final tick from flipping state back to active
         clearIdleCheckInterval()
-        transitionToIdle(dayjs())
+        transitionToIdle(new Date())
     })
 
     powerMonitor.on('lock-screen', () => {
         if (!idleDetectionEnabled) return
         console.log('powerMonitor: screen locked')
         clearIdleCheckInterval()
-        transitionToIdle(dayjs())
+        transitionToIdle(new Date())
     })
 
     powerMonitor.on('resume', () => {
@@ -200,7 +198,7 @@ function registerPowerMonitorEvents() {
         if (!idleDetectionEnabled) return
         console.log('powerMonitor: session resigned active')
         clearIdleCheckInterval()
-        transitionToIdle(dayjs())
+        transitionToIdle(new Date())
     })
 
     powerMonitor.on('user-did-become-active', () => {
@@ -234,8 +232,7 @@ function restartIdleCheckInterval() {
         const idleTime = powerMonitor.getSystemIdleTime()
 
         if (idleTime >= idleThreshold) {
-            const now = dayjs()
-            transitionToIdle(now.subtract(idleTime, 'seconds'))
+            transitionToIdle(new Date(Date.now() - idleTime * 1000))
         } else {
             transitionToActive()
         }
@@ -258,15 +255,15 @@ function startIdleMonitoring() {
     if (currentIdleTime >= idleThreshold) {
         // System is already idle when monitoring starts
         isIdle = true
-        const now = dayjs()
-        idleStartTime = now.subtract(currentIdleTime, 'seconds')
+        idleStartTime = new Date(Date.now() - currentIdleTime * 1000)
         activeStartTime = null
+        void pauseActivityTracking(idleStartTime)
         console.log(
             `System already idle when monitoring started. Idle since: ${idleStartTime.toISOString()}`
         )
     } else {
         // System is active, start tracking from now
-        activeStartTime = dayjs()
+        activeStartTime = new Date()
     }
 
     // Check idle state every second
@@ -344,14 +341,16 @@ async function showIdleDialog(idleStartTime: string, idleEndTime: string, durati
 async function stopIdleMonitoring() {
     // Save the current active period if we're stopping while active
     if (activeStartTime && !isIdle) {
-        const now = dayjs()
+        const now = new Date()
         await saveActivityPeriod(activeStartTime.toISOString(), now.toISOString(), false)
     }
 
     // Save current idle period if we're stopping while idle
     if (idleStartTime && isIdle) {
-        const now = dayjs()
+        const now = new Date()
         await saveActivityPeriod(idleStartTime.toISOString(), now.toISOString(), true)
+        // Resume when idle detection is disabled mid-idle.
+        resumeActivityTracking()
     }
 
     clearIdleCheckInterval()
@@ -366,20 +365,20 @@ async function stopIdleMonitoring() {
  * Returns null if there's no ongoing period or if waiting for user response
  */
 export function getCurrentActivityPeriod(): { start: string; end: string; isIdle: boolean } | null {
-    const now = dayjs()
+    const now = new Date()
 
     if (isIdle && idleStartTime) {
         // Currently in an idle period
         return {
-            start: idleStartTime.utc().format(),
-            end: now.utc().format(),
+            start: idleStartTime.toISOString(),
+            end: now.toISOString(),
             isIdle: true,
         }
     } else if (!isIdle && activeStartTime) {
         // Currently in an active period
         return {
-            start: activeStartTime.utc().format(),
-            end: now.utc().format(),
+            start: activeStartTime.toISOString(),
+            end: now.toISOString(),
             isIdle: false,
         }
     }
