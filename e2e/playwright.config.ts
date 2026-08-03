@@ -7,6 +7,7 @@ export default defineConfig({
     workers: 1, // Electron tests must run serially
     reporter: process.env.CI ? 'github' : 'list',
     use: {
-        trace: 'on-first-retry',
+        trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
+        screenshot: 'only-on-failure',
     },
 })
