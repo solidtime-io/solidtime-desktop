@@ -66,10 +66,10 @@ test.describe('Statistics page - actions dropdown', () => {
         await page.getByTestId('delete-range-button').click()
 
         const modalHeading = page.getByRole('heading', { name: 'Delete Window Activities' })
-        await expect(modalHeading).toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).toBeVisible()
         await expect(page.getByText('This action cannot be undone.')).toBeVisible()
 
         await page.getByText('Cancel').click()
-        await expect(modalHeading).not.toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).not.toBeVisible()
     })
 })

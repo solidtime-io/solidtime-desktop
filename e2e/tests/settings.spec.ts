@@ -73,19 +73,19 @@ test.describe('Settings page - Data Management', () => {
         await page.getByTestId('wa-range-60').click()
 
         const modalHeading = page.getByRole('heading', { name: 'Delete Window Activities' })
-        await expect(modalHeading).toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).toBeVisible()
         await expect(page.locator('strong', { hasText: 'last hour' })).toBeVisible()
         await expect(page.getByText('This action cannot be undone.')).toBeVisible()
 
         await page.getByText('Cancel').click()
-        await expect(modalHeading).not.toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).not.toBeVisible()
     })
 
     test('window activities Delete All button opens confirmation modal', async ({ page }) => {
         await page.locator('button', { hasText: 'Delete All' }).first().click()
 
         const modalHeading = page.getByRole('heading', { name: 'Delete Window Activities' })
-        await expect(modalHeading).toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).toBeVisible()
         await expect(
             page.getByText('Are you sure you want to delete all window activities')
         ).toBeVisible()
@@ -96,7 +96,7 @@ test.describe('Settings page - Data Management', () => {
         await expect(button).toBeVisible({ timeout: 5000 })
         await button.click()
 
-        await expect(page.getByTestId('ap-range-15')).toBeVisible({ timeout: 3000 })
+        await expect(page.getByTestId('ap-range-15')).toBeVisible()
         await expect(page.getByTestId('ap-range-60')).toBeVisible()
         await expect(page.getByTestId('ap-range-1440')).toBeVisible()
         await expect(page.getByTestId('ap-range-10080')).toBeVisible()
@@ -110,19 +110,19 @@ test.describe('Settings page - Data Management', () => {
         await page.getByTestId('ap-range-10080').click()
 
         const modalHeading = page.getByRole('heading', { name: 'Delete Activity Periods' })
-        await expect(modalHeading).toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).toBeVisible()
         await expect(page.locator('strong', { hasText: 'last 7 days' })).toBeVisible()
         await expect(page.getByText('This action cannot be undone.')).toBeVisible()
 
         await page.getByText('Cancel').click()
-        await expect(modalHeading).not.toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).not.toBeVisible()
     })
 
     test('activity periods Delete All button opens confirmation modal', async ({ page }) => {
         await page.locator('button', { hasText: 'Delete All' }).nth(1).click()
 
         const modalHeading = page.getByRole('heading', { name: 'Delete Activity Periods' })
-        await expect(modalHeading).toBeVisible({ timeout: 3000 })
+        await expect(modalHeading).toBeVisible()
         await expect(
             page.getByText('Are you sure you want to delete all activity periods')
         ).toBeVisible()
