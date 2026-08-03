@@ -10,7 +10,7 @@ const app = createApp(App)
 import * as Sentry from '@sentry/electron/renderer'
 
 // Only initialize Sentry in production and if the user opted in to error reporting
-if (import.meta.env.PROD || true) {
+if (import.meta.env.PROD) {
     window.electronAPI
         .getSettings()
         .then((result) => {

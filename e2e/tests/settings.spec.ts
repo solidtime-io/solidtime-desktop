@@ -34,9 +34,10 @@ test.describe('Settings page', () => {
         await expect(loginButton).toBeVisible({ timeout: 5000 })
     })
 
-    test('displays preferences section', async ({ page }) => {
-        const preferencesHeading = page.getByText('Preferences')
-        await expect(preferencesHeading).toBeVisible()
+    test('displays preference sections', async ({ page }) => {
+        await expect(page.getByText('Appearance')).toBeVisible()
+        await expect(page.getByText('Tracking', { exact: true })).toBeVisible()
+        await expect(page.getByText('Privacy', { exact: true })).toBeVisible()
     })
 
     test('displays widget toggle', async ({ page }) => {
