@@ -308,7 +308,7 @@ const totalTime = computed(() => {
         :closeable="!isDeletingRange"
         @close="showDeleteRangeModal = false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Delete Window Activities
             </div>
 

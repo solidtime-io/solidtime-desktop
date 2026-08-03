@@ -716,7 +716,7 @@ watch(activityTrackingEnabled, (enabled) => {
     <!-- Screen Recording Permission Modal -->
     <Modal :show="showPermissionModal" :maxWidth="'2xl'" :closeable="false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Improve Activity Tracking
             </div>
 
@@ -752,7 +752,7 @@ watch(activityTrackingEnabled, (enabled) => {
         :closeable="true"
         @close="closeManualInstructions">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Manually Grant Screen Recording Permission
             </div>
 
@@ -802,7 +802,7 @@ watch(activityTrackingEnabled, (enabled) => {
         :closeable="!isDeletingWindowActivities"
         @close="showDeleteWindowActivitiesModal = false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Delete Window Activities
             </div>
 
@@ -841,7 +841,7 @@ watch(activityTrackingEnabled, (enabled) => {
         :closeable="!isDeletingActivityPeriods"
         @close="showDeleteActivityPeriodsModal = false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Delete Activity Periods
             </div>
 
@@ -880,7 +880,9 @@ watch(activityTrackingEnabled, (enabled) => {
         :closeable="!isDeletingIconCache"
         @close="showDeleteIconCacheModal = false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">Clear Icon Cache</div>
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
+                Clear Icon Cache
+            </div>
 
             <div class="text-sm text-muted-foreground space-y-3">
                 <p>
@@ -916,7 +918,7 @@ watch(activityTrackingEnabled, (enabled) => {
         :closeable="!isDeletingWindowActivitiesRange"
         @close="showDeleteWindowActivitiesRangeModal = false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Delete Window Activities
             </div>
 
@@ -957,7 +959,7 @@ watch(activityTrackingEnabled, (enabled) => {
         :closeable="!isDeletingActivityPeriodsRange"
         @close="showDeleteActivityPeriodsRangeModal = false">
         <div class="px-6 py-4">
-            <div class="text-lg font-medium text-white mb-4" role="heading">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
                 Delete Activity Periods
             </div>
 

@@ -508,13 +508,13 @@ watch(isLoadMoreVisible, async (isVisible) => {
                     :timeEntries="timeEntries"></TimeEntryGroupedTable>
                 <div v-if="timeEntries && timeEntries.length === 0" class="text-center pt-12">
                     <ClockIcon class="w-8 text-icon-default inline pb-2"></ClockIcon>
-                    <h3 class="text-white font-semibold">No time entries found</h3>
+                    <h3 class="text-text-primary font-semibold">No time entries found</h3>
                     <p class="pb-5 text-muted-foreground">Create your first time entry now!</p>
                 </div>
                 <div ref="loadMoreContainer">
                     <div
                         v-if="isFetchingNextPage"
-                        class="flex justify-center items-center py-5 text-white font-medium">
+                        class="flex justify-center items-center py-5 text-text-primary font-medium">
                         <LoadingSpinner class="ml-0 mr-0"></LoadingSpinner>
                         <span class="ml-2"> Loading more time entries... </span>
                     </div>
