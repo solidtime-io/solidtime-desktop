@@ -139,7 +139,7 @@ const currentTimer = computed(() => {
 
 <template>
     <div
-        class="h-screen relative w-screen border-border-secondary border bg-primary rounded-[10px] text-white py-1 flex items-center cursor-default justify-between select-none">
+        class="h-screen relative w-screen border-border-secondary border bg-primary rounded-[16px] text-white py-1 flex items-center cursor-default justify-between select-none">
         <div
             class="text-sm text-text-tertiary flex items-center relative min-w-0"
             :class="isOnBreak ? 'shrink-0' : 'flex-1'">
