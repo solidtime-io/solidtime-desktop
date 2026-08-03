@@ -4,6 +4,7 @@ export interface AppSettings {
     idleDetectionEnabled: boolean
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
+    errorReportingEnabled: boolean
 }
 
 export interface WindowActivityStats {

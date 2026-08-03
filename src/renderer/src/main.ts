@@ -9,21 +9,27 @@ const app = createApp(App)
 
 import * as Sentry from '@sentry/electron/renderer'
 
-// Only initialize Sentry in production
-if (import.meta.env.PROD) {
-    Sentry.init({
-        integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-
-        // Set tracesSampleRate to 1.0 to capture 100%
-        // of transactions for performance monitoring.
-        // We recommend adjusting this value in production
-        tracesSampleRate: 0.1,
-
-        // Capture Replay for 10% of all sessions,
-        // plus for 100% of sessions with an error
-        replaysSessionSampleRate: 0.1,
-        replaysOnErrorSampleRate: 1.0,
-    })
+// Only initialize Sentry in production and if the user opted in to error reporting
+if (import.meta.env.PROD || true) {
+    window.electronAPI
+        .getSettings()
+        .then((result) => {
+            if (result.success && result.data?.errorReportingEnabled) {
+                Sentry.init({
+                    integrations: [
+                        Sentry.replayIntegration({
+                            maskAllText: true,
+                            blockAllMedia: true,
+                        }),
+                    ],
+                    replaysSessionSampleRate: 0,
+                    replaysOnErrorSampleRate: 1.0,
+                })
+            }
+        })
+        .catch((error) => {
+            console.error('Failed to read error reporting setting:', error)
+        })
 }
 
 window.addEventListener('keypress', (event) => {

@@ -15,7 +15,7 @@ import { registerVueDevTools } from './devtools'
 import { initializeIdleMonitor } from './idleMonitor'
 import { runMigrations } from './db/migrate'
 import { registerActivityPeriodListeners } from './activityPeriods'
-import { registerSettingsListeners } from './settings'
+import { registerSettingsListeners, getErrorReportingEnabledAtStartup } from './settings'
 import { initializeActivityTracker, stopActivityTracking } from './activityTracker'
 import { registerWindowActivitiesHandlers } from './windowActivities'
 import { registerAppIconHandlers } from './appIcons'
@@ -62,9 +62,17 @@ if (!isE2ETesting()) {
 
 initializeAutoUpdater()
 
-Sentry.init({
-    dsn: 'https://cc0104f2ce88d4490bbde2750b6483c4@o4507102829543424.ingest.de.sentry.io/4507783414939728',
-})
+// Sentry must be initialized before Electron's ready event. The persisted
+// opt-in is read synchronously below and defaults to disabled.
+function initializeSentry(): void {
+    Sentry.init({
+        dsn: 'https://cc0104f2ce88d4490bbde2750b6483c4@o4507102829543424.ingest.de.sentry.io/4507783414939728',
+    })
+}
+
+if (!isE2ETesting() && getErrorReportingEnabledAtStartup()) {
+    initializeSentry()
+}
 
 if (process.defaultApp) {
     if (process.argv.length >= 2) {

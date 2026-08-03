@@ -26,6 +26,7 @@ import {
     idleDetectionEnabled,
     idleThresholdMinutes,
     activityTrackingEnabled,
+    errorReportingEnabled,
 } from '../utils/settings.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
@@ -385,7 +386,7 @@ watch(activityTrackingEnabled, (enabled) => {
 
             <div
                 class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
-                <div class="mb-4 text-lg font-medium">Preferences</div>
+                <div class="mb-4 text-lg font-medium">Appearance</div>
                 <div class="space-y-4">
                     <div class="flex flex-col space-y-1">
                         <label for="theme" class="text-sm">Theme</label>
@@ -399,7 +400,9 @@ watch(activityTrackingEnabled, (enabled) => {
                                 <SelectItem value="dark">Dark</SelectItem>
                             </SelectContent>
                         </Select>
-                        <span v-if="themeSetting === 'system'" class="text-xs text-muted">
+                        <span
+                            v-if="themeSetting === 'system'"
+                            class="text-xs text-muted-foreground">
                             System default: {{ preferredColor }}
                         </span>
                     </div>
@@ -417,6 +420,13 @@ watch(activityTrackingEnabled, (enabled) => {
                         <Checkbox v-model:checked="isTrayTimerActivated" name="tray_timer" />
                         <span class="ms-2 text-sm">Show Tray / Menu Bar Timer</span>
                     </label>
+                </div>
+            </div>
+
+            <div
+                class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
+                <div class="mb-4 text-lg font-medium">Tracking</div>
+                <div class="space-y-4">
                     <label class="flex items-center">
                         <Checkbox v-model:checked="idleDetectionEnabled" name="idleDetection" />
                         <span class="ms-2 text-sm">Enable Idle Detection</span>
@@ -560,6 +570,22 @@ watch(activityTrackingEnabled, (enabled) => {
                                 Grant Permission
                             </SecondaryButton>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
+                <div class="mb-4 text-lg font-medium">Privacy</div>
+                <div class="space-y-4">
+                    <label class="flex items-center">
+                        <Checkbox v-model:checked="errorReportingEnabled" name="errorReporting" />
+                        <span class="ms-2 text-sm">Enable Error Reporting</span>
+                    </label>
+                    <div class="ml-6 text-xs text-muted-foreground">
+                        Sends crash and error diagnostics to Sentry. When an error occurs, this may
+                        include a privacy-masked replay of recent app activity. Replays are not sent
+                        for error-free sessions. Changes take effect after restarting the app.
                     </div>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { db } from './db/client'
+import { client, db } from './db/client'
 import { settings } from './db/schema'
 import { eq } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
@@ -11,6 +11,7 @@ export interface AppSettings {
     idleDetectionEnabled: boolean
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
+    errorReportingEnabled: boolean
 }
 
 // Default settings
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     idleDetectionEnabled: true,
     idleThresholdMinutes: 5,
     activityTrackingEnabled: false, // Off by default for privacy
+    errorReportingEnabled: false, // Off by default for privacy
 }
 
 // Setting keys used in the database
@@ -29,7 +31,27 @@ const SETTING_KEYS = {
     IDLE_DETECTION_ENABLED: 'idle_detection_enabled',
     IDLE_THRESHOLD_MINUTES: 'idle_threshold_minutes',
     ACTIVITY_TRACKING_ENABLED: 'activity_tracking_enabled',
+    ERROR_REPORTING_ENABLED: 'error_reporting_enabled',
 } as const
+
+/**
+ * Reads the error reporting preference synchronously during application startup.
+ * Sentry must be initialized before Electron's ready event, so the regular
+ * asynchronous settings API cannot be used for this check.
+ */
+export function getErrorReportingEnabledAtStartup(): boolean {
+    try {
+        const row = client
+            .prepare('SELECT value FROM settings WHERE key = ? LIMIT 1')
+            .get(SETTING_KEYS.ERROR_REPORTING_ENABLED) as { value: string } | undefined
+
+        return row?.value === 'true'
+    } catch {
+        // The settings table may not exist yet on first launch. Fail closed so
+        // error reporting remains disabled until the user explicitly opts in.
+        return DEFAULT_SETTINGS.errorReportingEnabled
+    }
+}
 
 /**
  * Gets a setting value from the database
@@ -94,12 +116,14 @@ export async function getAppSettings(): Promise<AppSettings> {
             idleDetectionEnabled,
             idleThresholdMinutes,
             activityTrackingEnabled,
+            errorReportingEnabled,
         ] = await Promise.all([
             getSetting(SETTING_KEYS.WIDGET_ACTIVATED),
             getSetting(SETTING_KEYS.TRAY_TIMER_ACTIVATED),
             getSetting(SETTING_KEYS.IDLE_DETECTION_ENABLED),
             getSetting(SETTING_KEYS.IDLE_THRESHOLD_MINUTES),
             getSetting(SETTING_KEYS.ACTIVITY_TRACKING_ENABLED),
+            getSetting(SETTING_KEYS.ERROR_REPORTING_ENABLED),
         ])
 
         return {
@@ -123,6 +147,10 @@ export async function getAppSettings(): Promise<AppSettings> {
                 activityTrackingEnabled !== null
                     ? activityTrackingEnabled === 'true'
                     : DEFAULT_SETTINGS.activityTrackingEnabled,
+            errorReportingEnabled:
+                errorReportingEnabled !== null
+                    ? errorReportingEnabled === 'true'
+                    : DEFAULT_SETTINGS.errorReportingEnabled,
         }
     } catch (error) {
         console.error('Failed to get app settings, using defaults:', error)
@@ -180,6 +208,15 @@ export async function updateAppSettings(
                 setSetting(
                     SETTING_KEYS.ACTIVITY_TRACKING_ENABLED,
                     String(partialSettings.activityTrackingEnabled)
+                )
+            )
+        }
+
+        if (partialSettings.errorReportingEnabled !== undefined) {
+            promises.push(
+                setSetting(
+                    SETTING_KEYS.ERROR_REPORTING_ENABLED,
+                    String(partialSettings.errorReportingEnabled)
                 )
             )
         }

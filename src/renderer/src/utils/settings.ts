@@ -6,6 +6,7 @@ export interface AppSettings {
     idleDetectionEnabled: boolean
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
+    errorReportingEnabled: boolean
 }
 
 // Reactive settings that sync with the database
@@ -14,6 +15,7 @@ export const isTrayTimerActivated = ref(true)
 export const idleDetectionEnabled = ref(true)
 export const idleThresholdMinutes = ref(5)
 export const activityTrackingEnabled = ref(false) // Off by default
+export const errorReportingEnabled = ref(false) // Off by default
 
 let isInitialized = false
 
@@ -31,6 +33,7 @@ export async function initializeSettings() {
             idleDetectionEnabled.value = result.data.idleDetectionEnabled
             idleThresholdMinutes.value = result.data.idleThresholdMinutes
             activityTrackingEnabled.value = result.data.activityTrackingEnabled
+            errorReportingEnabled.value = result.data.errorReportingEnabled
         }
 
         isInitialized = true
@@ -58,6 +61,10 @@ export async function initializeSettings() {
 
         watch(activityTrackingEnabled, (value) => {
             updateSetting({ activityTrackingEnabled: value })
+        })
+
+        watch(errorReportingEnabled, (value) => {
+            updateSetting({ errorReportingEnabled: value })
         })
     } catch (error) {
         console.error('Failed to initialize settings:', error)

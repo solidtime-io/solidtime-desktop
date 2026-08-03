@@ -17,6 +17,7 @@ if (process.contextIsolated) {
             startBreak: () => ipcRenderer.send('startBreak'),
             resumeAfterBreak: () => ipcRenderer.send('resumeAfterBreak'),
             showMainWindow: () => ipcRenderer.send('showMainWindow'),
+            getSettings: () => ipcRenderer.invoke('getSettings'),
         })
     } catch (error) {
         console.error(error)
