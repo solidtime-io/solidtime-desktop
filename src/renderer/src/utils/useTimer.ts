@@ -21,7 +21,9 @@ export function getLastWorkTimeEntry(
 ): TimeEntry | null {
     return (
         timeEntries.find(
-            (entry) => entry.type === 'work' && !dayjs(entry.start).utc().isAfter(currentTime)
+            // Servers without break support omit `type` — treat those entries as work
+            (entry) =>
+                (entry.type ?? 'work') === 'work' && !dayjs(entry.start).utc().isAfter(currentTime)
         ) ?? null
     )
 }
