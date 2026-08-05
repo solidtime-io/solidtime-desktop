@@ -43,8 +43,15 @@ provide('organization', organization)
 const queryClient = useQueryClient()
 
 // Use the timer composable for shared timer logic
-const { stopTimer, continueLastTimer, isActive, lastTimeEntry, startBreak, resumeWorkAfterBreak } =
-    useTimer()
+const {
+    stopTimer,
+    continueLastTimer,
+    toggleTimer,
+    isActive,
+    lastTimeEntry,
+    startBreak,
+    resumeWorkAfterBreak,
+} = useTimer()
 
 // Live timer for bottom row display
 const { liveTimer, startLiveTimer, stopLiveTimer } = useLiveTimer()
@@ -129,6 +136,9 @@ onMounted(async () => {
         if (lastTimeEntry.value?.start && lastTimeEntry.value.type !== 'break') {
             resumeWorkAfterBreak(lastTimeEntry.value)
         }
+    })
+    await listenForBackendEvent('toggleTimer', () => {
+        void toggleTimer()
     })
 
     // Listen for idle dialog response from main process

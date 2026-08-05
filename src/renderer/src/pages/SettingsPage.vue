@@ -27,6 +27,10 @@ import {
     idleThresholdMinutes,
     activityTrackingEnabled,
     errorReportingEnabled,
+    globalShortcutShowApp,
+    globalShortcutToggleTimer,
+    globalShortcutShowAppError,
+    globalShortcutToggleTimerError,
 } from '../utils/settings.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
@@ -41,6 +45,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { dayjs } from '../utils/dayjs.ts'
 import { EllipsisVerticalIcon } from '@heroicons/vue/24/outline'
+import ShortcutInput from '../components/ShortcutInput.vue'
 
 type LinuxXWinExtensionStatus = {
     applicable: boolean
@@ -586,6 +591,44 @@ watch(activityTrackingEnabled, (enabled) => {
                         Sends crash and error diagnostics to Sentry. When an error occurs, this may
                         include a privacy-masked replay of recent app activity. Replays are not sent
                         for error-free sessions. Changes take effect after restarting the app.
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-card-background rounded-lg border border-card-background-separator p-6 mb-6">
+                <div class="mb-4 text-lg font-medium">Global Shortcuts</div>
+                <div class="space-y-5">
+                    <div class="flex flex-col space-y-2">
+                        <div>
+                            <label for="global-shortcut-show-app" class="text-sm font-medium">
+                                Show or hide Solidtime
+                            </label>
+                            <p class="text-xs text-muted-foreground">
+                                Shows the main window and brings it to the front. If it is already
+                                visible, hides it instead.
+                            </p>
+                        </div>
+                        <ShortcutInput
+                            id="global-shortcut-show-app"
+                            v-model="globalShortcutShowApp"
+                            :error="globalShortcutShowAppError" />
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <div>
+                            <label for="global-shortcut-toggle-timer" class="text-sm font-medium">
+                                Resume most recent entry / stop timer
+                            </label>
+                            <p class="text-xs text-muted-foreground">
+                                Resumes your most recent entry by copying its description, project,
+                                task, tags, and billable setting. If a timer is already running,
+                                stops it instead.
+                            </p>
+                        </div>
+                        <ShortcutInput
+                            id="global-shortcut-toggle-timer"
+                            v-model="globalShortcutToggleTimer"
+                            :error="globalShortcutToggleTimerError" />
                     </div>
                 </div>
             </div>

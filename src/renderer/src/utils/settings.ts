@@ -7,6 +7,8 @@ export interface AppSettings {
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
+    globalShortcutShowApp: string
+    globalShortcutToggleTimer: string
 }
 
 // Reactive settings that sync with the database
@@ -16,6 +18,13 @@ export const idleDetectionEnabled = ref(true)
 export const idleThresholdMinutes = ref(5)
 export const activityTrackingEnabled = ref(false) // Off by default
 export const errorReportingEnabled = ref(false) // Off by default
+export const globalShortcutShowApp = ref('')
+export const globalShortcutToggleTimer = ref('')
+export const globalShortcutShowAppError = ref('')
+export const globalShortcutToggleTimerError = ref('')
+
+const SHORTCUT_UNAVAILABLE_MESSAGE =
+    'This shortcut could not be registered. It may already be used by another app.'
 
 let isInitialized = false
 
@@ -34,6 +43,9 @@ export async function initializeSettings() {
             idleThresholdMinutes.value = result.data.idleThresholdMinutes
             activityTrackingEnabled.value = result.data.activityTrackingEnabled
             errorReportingEnabled.value = result.data.errorReportingEnabled
+            globalShortcutShowApp.value = result.data.globalShortcutShowApp
+            globalShortcutToggleTimer.value = result.data.globalShortcutToggleTimer
+            await refreshGlobalShortcutRegistration()
         }
 
         isInitialized = true
@@ -66,6 +78,14 @@ export async function initializeSettings() {
         watch(errorReportingEnabled, (value) => {
             updateSetting({ errorReportingEnabled: value })
         })
+
+        watch(globalShortcutShowApp, (value) => {
+            void updateShortcutSetting({ globalShortcutShowApp: value })
+        })
+
+        watch(globalShortcutToggleTimer, (value) => {
+            void updateShortcutSetting({ globalShortcutToggleTimer: value })
+        })
     } catch (error) {
         console.error('Failed to initialize settings:', error)
     }
@@ -74,13 +94,45 @@ export async function initializeSettings() {
 /**
  * Update settings in the database
  */
-async function updateSetting(partialSettings: Partial<AppSettings>) {
+async function updateSetting(partialSettings: Partial<AppSettings>): Promise<boolean> {
     try {
         const result = await window.electronAPI.updateSettings(partialSettings)
         if (!result.success) {
             console.error('Failed to update settings:', result.error)
+            return false
         }
+        return true
     } catch (error) {
         console.error('Failed to update settings:', error)
+        return false
+    }
+}
+
+async function updateShortcutSetting(partialSettings: Partial<AppSettings>): Promise<void> {
+    const updated = await updateSetting(partialSettings)
+    if (!updated) return
+
+    await refreshGlobalShortcutRegistration()
+}
+
+async function refreshGlobalShortcutRegistration(): Promise<void> {
+    try {
+        const result = await window.electronAPI.updateGlobalShortcuts()
+        if (!result.success || !result.data) {
+            const message = result.error ?? 'The global shortcuts could not be updated.'
+            globalShortcutShowAppError.value = message
+            globalShortcutToggleTimerError.value = message
+            return
+        }
+
+        globalShortcutShowAppError.value = result.data.showApp ? '' : SHORTCUT_UNAVAILABLE_MESSAGE
+        globalShortcutToggleTimerError.value = result.data.toggleTimer
+            ? ''
+            : SHORTCUT_UNAVAILABLE_MESSAGE
+    } catch (error) {
+        console.error('Failed to update global shortcuts:', error)
+        const message = 'The global shortcuts could not be updated.'
+        globalShortcutShowAppError.value = message
+        globalShortcutToggleTimerError.value = message
     }
 }

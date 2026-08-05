@@ -5,6 +5,13 @@ export interface AppSettings {
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
+    globalShortcutShowApp: string
+    globalShortcutToggleTimer: string
+}
+
+export interface GlobalShortcutRegistrationResult {
+    showApp: boolean
+    toggleTimer: boolean
 }
 
 export interface WindowActivityStats {
@@ -50,6 +57,7 @@ export interface IElectronAPI {
     onStopTimer: (callback: () => void) => void
     onStartBreak: (callback: () => void) => void
     onResumeAfterBreak: (callback: () => void) => void
+    onToggleTimer: (callback: () => void) => void
     updateTrayState: (timeEntry: string, showTimer: boolean) => void
     updateAutoUpdater: () => void
     updateIdleThreshold: (thresholdMinutes: number) => void
@@ -64,6 +72,11 @@ export interface IElectronAPI {
     updateSettings: (
         settings: Partial<AppSettings>
     ) => Promise<{ success: boolean; data?: AppSettings; error?: string }>
+    updateGlobalShortcuts: () => Promise<{
+        success: boolean
+        data?: GlobalShortcutRegistrationResult
+        error?: string
+    }>
     getWindowActivityStats: (startDate: string, endDate: string) => Promise<WindowActivityStats[]>
     getAppIcon: (appName: string) => Promise<string | null>
     getIcons: (names: string[]) => Promise<Record<string, string | null>>

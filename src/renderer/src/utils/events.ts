@@ -19,6 +19,11 @@ export async function listenForBackendEvent(event: string, callback: () => void)
             callback()
         })
     }
+    if (event === 'toggleTimer') {
+        window.electronAPI.onToggleTimer(() => {
+            callback()
+        })
+    }
 }
 
 export async function sendEventToWindow(_: string, event: string) {

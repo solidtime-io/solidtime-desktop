@@ -1,4 +1,12 @@
-import { app, BrowserWindow, ipcMain, dialog, systemPreferences, desktopCapturer } from 'electron'
+import {
+    app,
+    BrowserWindow,
+    ipcMain,
+    dialog,
+    systemPreferences,
+    desktopCapturer,
+    globalShortcut,
+} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/linux_icon.png?asset'
@@ -15,7 +23,11 @@ import { registerVueDevTools } from './devtools'
 import { initializeIdleMonitor } from './idleMonitor'
 import { runMigrations } from './db/migrate'
 import { registerActivityPeriodListeners } from './activityPeriods'
-import { registerSettingsListeners, getErrorReportingEnabledAtStartup } from './settings'
+import {
+    getAppSettings,
+    getErrorReportingEnabledAtStartup,
+    registerSettingsListeners,
+} from './settings'
 import { initializeActivityTracker, stopActivityTracking } from './activityTracker'
 import { registerWindowActivitiesHandlers } from './windowActivities'
 import { registerAppIconHandlers } from './appIcons'
@@ -24,8 +36,14 @@ import { getActivityTrackingSupport } from './activityTrackingSupport'
 import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
 import { stopIdleMonitoring } from './idleMonitor'
+import { applyGlobalShortcuts, registerGlobalShortcutListeners } from './globalShortcuts'
 
 import { isE2ETesting } from './env'
+
+if (process.platform === 'linux') {
+    // Electron 41 requires the portal implementation for global shortcuts on Wayland.
+    app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
+}
 
 // Global error handlers to capture full error details
 process.on('uncaughtException', (error) => {
@@ -157,6 +175,7 @@ app.whenReady().then(async () => {
     // Register IPC handlers
     registerActivityPeriodListeners()
     registerSettingsListeners()
+    registerGlobalShortcutListeners()
     registerWindowActivitiesHandlers()
     registerAppIconHandlers()
     registerXWinExtensionHandlers()
@@ -212,6 +231,11 @@ app.whenReady().then(async () => {
         app.quit()
     })
 
+    const settings = await getAppSettings()
+    applyGlobalShortcuts({
+        showApp: settings.globalShortcutShowApp,
+        toggleTimer: settings.globalShortcutToggleTimer,
+    })
     await initializeIdleMonitor()
     await initializeActivityTracker()
 
@@ -229,6 +253,10 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit()
     }
+})
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll()
 })
 
 // Save active periods before quitting. Use app.quit() after the async save so

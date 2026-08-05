@@ -53,6 +53,7 @@ export function useTimer() {
     const queryClient = useQueryClient()
 
     const { memberships, currentOrganizationId } = useMyMemberships()
+    let toggleInProgress = false
 
     /**
      * Check if there's an active timer running
@@ -145,7 +146,7 @@ export function useTimer() {
      * Starts a new timer using the values from lastTimeEntry (description, project, task, etc.).
      * Used when starting a timer from the widget, tray, or after discarding idle time.
      */
-    function continueLastTimer() {
+    async function continueLastTimer() {
         const startTime = dayjs().utc().format()
 
         if (lastTimeEntry.value && lastTimeEntry.value.start) {
@@ -174,7 +175,11 @@ export function useTimer() {
             ...currentTimeEntry.value,
             member_id: currentMembershipId.value!,
         }
-        timeEntryCreate.mutate(timeEntryToCreate)
+        try {
+            await timeEntryCreate.mutateAsync(timeEntryToCreate)
+        } catch (error) {
+            console.error('Failed to continue timer:', error)
+        }
     }
 
     /**
@@ -240,6 +245,21 @@ export function useTimer() {
         startTimer()
     }
 
+    /**
+     * Toggle the timer from a global shortcut without allowing a repeated keydown
+     * to undo the operation that it just started.
+     */
+    async function toggleTimer() {
+        if (toggleInProgress) return
+
+        toggleInProgress = true
+        try {
+            await (isActive.value ? stopTimer() : continueLastTimer())
+        } finally {
+            toggleInProgress = false
+        }
+    }
+
     return {
         currentTimeEntry,
         lastTimeEntry,
@@ -250,6 +270,7 @@ export function useTimer() {
         startBreak,
         resumeWorkAfterBreak,
         continueLastTimer,
+        toggleTimer,
         timeEntryStop,
         timeEntryCreate,
     }

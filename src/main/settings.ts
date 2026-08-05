@@ -12,6 +12,8 @@ export interface AppSettings {
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
+    globalShortcutShowApp: string
+    globalShortcutToggleTimer: string
 }
 
 // Default settings
@@ -22,6 +24,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     idleThresholdMinutes: 5,
     activityTrackingEnabled: false, // Off by default for privacy
     errorReportingEnabled: false, // Off by default for privacy
+    globalShortcutShowApp: '',
+    globalShortcutToggleTimer: '',
 }
 
 // Setting keys used in the database
@@ -32,6 +36,8 @@ const SETTING_KEYS = {
     IDLE_THRESHOLD_MINUTES: 'idle_threshold_minutes',
     ACTIVITY_TRACKING_ENABLED: 'activity_tracking_enabled',
     ERROR_REPORTING_ENABLED: 'error_reporting_enabled',
+    GLOBAL_SHORTCUT_SHOW_APP: 'global_shortcut_show_app',
+    GLOBAL_SHORTCUT_TOGGLE_TIMER: 'global_shortcut_toggle_timer',
 } as const
 
 /**
@@ -117,6 +123,8 @@ export async function getAppSettings(): Promise<AppSettings> {
             idleThresholdMinutes,
             activityTrackingEnabled,
             errorReportingEnabled,
+            globalShortcutShowApp,
+            globalShortcutToggleTimer,
         ] = await Promise.all([
             getSetting(SETTING_KEYS.WIDGET_ACTIVATED),
             getSetting(SETTING_KEYS.TRAY_TIMER_ACTIVATED),
@@ -124,6 +132,8 @@ export async function getAppSettings(): Promise<AppSettings> {
             getSetting(SETTING_KEYS.IDLE_THRESHOLD_MINUTES),
             getSetting(SETTING_KEYS.ACTIVITY_TRACKING_ENABLED),
             getSetting(SETTING_KEYS.ERROR_REPORTING_ENABLED),
+            getSetting(SETTING_KEYS.GLOBAL_SHORTCUT_SHOW_APP),
+            getSetting(SETTING_KEYS.GLOBAL_SHORTCUT_TOGGLE_TIMER),
         ])
 
         return {
@@ -151,6 +161,9 @@ export async function getAppSettings(): Promise<AppSettings> {
                 errorReportingEnabled !== null
                     ? errorReportingEnabled === 'true'
                     : DEFAULT_SETTINGS.errorReportingEnabled,
+            globalShortcutShowApp: globalShortcutShowApp ?? DEFAULT_SETTINGS.globalShortcutShowApp,
+            globalShortcutToggleTimer:
+                globalShortcutToggleTimer ?? DEFAULT_SETTINGS.globalShortcutToggleTimer,
         }
     } catch (error) {
         console.error('Failed to get app settings, using defaults:', error)
@@ -217,6 +230,24 @@ export async function updateAppSettings(
                 setSetting(
                     SETTING_KEYS.ERROR_REPORTING_ENABLED,
                     String(partialSettings.errorReportingEnabled)
+                )
+            )
+        }
+
+        if (partialSettings.globalShortcutShowApp !== undefined) {
+            promises.push(
+                setSetting(
+                    SETTING_KEYS.GLOBAL_SHORTCUT_SHOW_APP,
+                    partialSettings.globalShortcutShowApp
+                )
+            )
+        }
+
+        if (partialSettings.globalShortcutToggleTimer !== undefined) {
+            promises.push(
+                setSetting(
+                    SETTING_KEYS.GLOBAL_SHORTCUT_TOGGLE_TIMER,
+                    partialSettings.globalShortcutToggleTimer
                 )
             )
         }
