@@ -100,7 +100,7 @@ export function useTimer() {
         try {
             await timeEntryStop.mutateAsync({
                 ...stoppedTimeEntry,
-                end: endTime || dayjs().utc().format(),
+                end: endTime ? dayjs(endTime).utc().format() : dayjs().utc().format(),
             })
         } catch (error) {
             // The server still has this entry running — put the UI back in
