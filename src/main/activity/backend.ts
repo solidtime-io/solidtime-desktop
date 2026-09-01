@@ -57,6 +57,23 @@ export function isSameWindowActivity(previous: WindowInfo, next: WindowInfo): bo
     )
 }
 
+/**
+ * True when an untitled overlay of the app we are already tracking should
+ * be ignored in favor of the current activity (issue #133): on macOS x-win
+ * reports the frontmost window, not the focused one, so untitled overlays
+ * (fullscreen toolbars, popups) would split the activity into "Untitled"
+ * rows. Snapshots with a new URL are kept, since in fullscreen browsers the
+ * URL change is the only record of a navigation.
+ */
+export function isUntitledOverlayOfSameApp(previous: WindowInfo, next: WindowInfo): boolean {
+    return (
+        !next.title &&
+        Boolean(previous.title) &&
+        previous.info.processId === next.info.processId &&
+        (!next.url || next.url === previous.url)
+    )
+}
+
 export interface ActivityBackend {
     /**
      * Start tracking. The handler is invoked every time the focused window

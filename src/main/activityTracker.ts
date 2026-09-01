@@ -4,7 +4,12 @@ import { getAppSettings } from './settings'
 import { hasScreenRecordingPermission } from './permissions'
 import { ipcMain, powerMonitor } from 'electron'
 import { logger } from './logger'
-import { isSameWindowActivity, type ActivityBackend, type WindowInfo } from './activity/backend'
+import {
+    isSameWindowActivity,
+    isUntitledOverlayOfSameApp,
+    type ActivityBackend,
+    type WindowInfo,
+} from './activity/backend'
 
 let activityTrackingEnabled = false
 let backend: ActivityBackend | null = null
@@ -203,11 +208,17 @@ export async function startActivityTracking(): Promise<void> {
  * Invoked by the active backend every time the focused window changes.
  *
  * Saves the previous window's activity and marks the new window as current.
- * Writes to the database only when activity tracking is enabled — this lets
+ * Writes to the database only when activity tracking is enabled, which lets
  * backends keep emitting events briefly during shutdown without recording
  * phantom activity.
  */
 async function handleWindowChange(windowInfo: WindowInfo): Promise<void> {
+    // Keep attributing time to the current titled window when an untitled
+    // window of the same app slides in front of it (issue #133).
+    if (lastWindowInfo && isUntitledOverlayOfSameApp(lastWindowInfo, windowInfo)) {
+        return
+    }
+
     const isNewWindow = !lastWindowInfo || !isSameWindowActivity(lastWindowInfo, windowInfo)
 
     if (!isNewWindow) {
