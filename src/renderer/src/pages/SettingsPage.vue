@@ -27,6 +27,7 @@ import {
     idleThresholdMinutes,
     activityTrackingEnabled,
     errorReportingEnabled,
+    updateChannel,
 } from '../utils/settings.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
@@ -595,6 +596,22 @@ watch(activityTrackingEnabled, (enabled) => {
                 <div class="mb-4 text-lg font-medium">Updates</div>
                 <div v-if="appVersion" class="mb-4 text-sm text-muted-foreground">
                     Current version: {{ appVersion }}
+                </div>
+                <div class="mb-4 flex flex-col space-y-1">
+                    <label for="updateChannel" class="text-sm">Update channel</label>
+                    <Select id="updateChannel" v-model="updateChannel">
+                        <SelectTrigger class="w-48">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="stable">Stable</SelectItem>
+                            <SelectItem value="beta">Beta</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <span class="text-xs text-muted-foreground">
+                        Beta receives pre-release versions early. Switching back to Stable installs
+                        the newest stable release, which may be a downgrade.
+                    </span>
                 </div>
                 <div class="flex items-center space-x-4">
                     <PrimaryButton v-if="updateReadyToInstall" @click="installUpdate">

@@ -36,6 +36,8 @@ if (process.contextIsolated || true) {
             updateTrayState: (timeEntry: string, showTimer: boolean) =>
                 ipcRenderer.send('updateTrayState', timeEntry, showTimer),
             updateAutoUpdater: () => ipcRenderer.send('updateAutoUpdater'),
+            updateUpdateChannel: (channel: 'stable' | 'beta') =>
+                ipcRenderer.invoke('updateUpdateChannel', channel),
             updateIdleThreshold: (thresholdMinutes: number) =>
                 ipcRenderer.send('updateIdleThreshold', thresholdMinutes),
             updateIdleDetectionEnabled: (enabled: boolean) =>

@@ -2,8 +2,10 @@ import { ipcMain, app, autoUpdater as nativeAutoUpdater } from 'electron'
 import type { AppUpdater } from 'electron-updater'
 import electronUpdater from 'electron-updater'
 import log from 'electron-log'
+import { getAppSettings, type UpdateChannel } from './settings'
 
 let updaterLifecycleLoggingRegistered = false
+let channelSettingApplied: Promise<void> = Promise.resolve()
 
 export function getAutoUpdater(): AppUpdater {
     // Using destructuring to access autoUpdater due to the CommonJS module of 'electron-updater'.
@@ -22,6 +24,11 @@ export function disableInstallOnQuit() {
     getAutoUpdater().autoInstallOnAppQuit = false
 }
 
+export function applyUpdateChannel(channel: UpdateChannel) {
+    getAutoUpdater().allowPrerelease = channel === 'beta'
+    log.info(`[updater] update channel set to ${channel}`)
+}
+
 export function initializeAutoUpdater() {
     registerUpdaterLifecycleLogging()
 
@@ -29,6 +36,24 @@ export function initializeAutoUpdater() {
     updater.autoDownload = true
     updater.autoInstallOnAppQuit = false
     updater.allowDowngrade = true
+
+    channelSettingApplied = getAppSettings()
+        .then((settings) => applyUpdateChannel(settings.updateChannel))
+        .catch((error) => {
+            log.error(`[updater] failed to load update channel setting: ${String(error)}`)
+        })
+
+    ipcMain.handle('updateUpdateChannel', (_event, channel: UpdateChannel) => {
+        if (channel !== 'stable' && channel !== 'beta') {
+            return { success: false, error: `Invalid update channel: ${String(channel)}` }
+        }
+        applyUpdateChannel(channel)
+        updater.checkForUpdatesAndNotify().catch((error) => {
+            const message = error instanceof Error ? error.message : String(error)
+            log.error(`[updater] checkForUpdatesAndNotify after channel switch: ${message}`)
+        })
+        return { success: true }
+    })
 
     log.info(
         `[updater] initialized (appVersion=${app.getVersion()}, isPackaged=${app.isPackaged}, platform=${process.platform})`
@@ -39,10 +64,12 @@ export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) 
     const updater = getAutoUpdater()
 
     ipcMain.on('updateAutoUpdater', () => {
-        updater.checkForUpdatesAndNotify().catch((error) => {
-            const message = error instanceof Error ? error.message : String(error)
-            log.error(`[updater] checkForUpdatesAndNotify rejected: ${message}`)
-        })
+        channelSettingApplied
+            .then(() => updater.checkForUpdatesAndNotify())
+            .catch((error) => {
+                const message = error instanceof Error ? error.message : String(error)
+                log.error(`[updater] checkForUpdatesAndNotify rejected: ${message}`)
+            })
     })
 
     updater.addListener('update-available', (info) => {

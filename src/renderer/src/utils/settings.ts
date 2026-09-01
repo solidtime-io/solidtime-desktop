@@ -1,5 +1,7 @@
 import { ref, watch } from 'vue'
 
+export type UpdateChannel = 'stable' | 'beta'
+
 export interface AppSettings {
     widgetActivated: boolean
     trayTimerActivated: boolean
@@ -7,6 +9,7 @@ export interface AppSettings {
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
+    updateChannel: UpdateChannel
 }
 
 // Reactive settings that sync with the database
@@ -16,6 +19,7 @@ export const idleDetectionEnabled = ref(true)
 export const idleThresholdMinutes = ref(5)
 export const activityTrackingEnabled = ref(false) // Off by default
 export const errorReportingEnabled = ref(false) // Off by default
+export const updateChannel = ref<UpdateChannel>('stable')
 
 let isInitialized = false
 
@@ -34,6 +38,7 @@ export async function initializeSettings() {
             idleThresholdMinutes.value = result.data.idleThresholdMinutes
             activityTrackingEnabled.value = result.data.activityTrackingEnabled
             errorReportingEnabled.value = result.data.errorReportingEnabled
+            updateChannel.value = result.data.updateChannel
         }
 
         isInitialized = true
@@ -65,6 +70,12 @@ export async function initializeSettings() {
 
         watch(errorReportingEnabled, (value) => {
             updateSetting({ errorReportingEnabled: value })
+        })
+
+        watch(updateChannel, (value) => {
+            updateSetting({ updateChannel: value })
+            // Also notify main so the updater switches channel immediately
+            window.electronAPI.updateUpdateChannel(value)
         })
     } catch (error) {
         console.error('Failed to initialize settings:', error)

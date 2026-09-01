@@ -1,8 +1,10 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import { client, db } from './db/client'
 import { settings } from './db/schema'
 import { eq } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
+
+export type UpdateChannel = 'stable' | 'beta'
 
 // Type definitions for settings
 export interface AppSettings {
@@ -12,6 +14,19 @@ export interface AppSettings {
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
+    updateChannel: UpdateChannel
+}
+
+/**
+ * Beta builds (prerelease version suffix) default to the beta channel so
+ * existing beta users keep receiving prereleases until they opt out.
+ */
+function defaultUpdateChannel(): UpdateChannel {
+    try {
+        return app.getVersion().includes('-') ? 'beta' : 'stable'
+    } catch {
+        return 'stable'
+    }
 }
 
 // Default settings
@@ -22,6 +37,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     idleThresholdMinutes: 5,
     activityTrackingEnabled: false, // Off by default for privacy
     errorReportingEnabled: false, // Off by default for privacy
+    updateChannel: defaultUpdateChannel(),
 }
 
 // Setting keys used in the database
@@ -32,6 +48,7 @@ const SETTING_KEYS = {
     IDLE_THRESHOLD_MINUTES: 'idle_threshold_minutes',
     ACTIVITY_TRACKING_ENABLED: 'activity_tracking_enabled',
     ERROR_REPORTING_ENABLED: 'error_reporting_enabled',
+    UPDATE_CHANNEL: 'update_channel',
 } as const
 
 /**
@@ -117,6 +134,7 @@ export async function getAppSettings(): Promise<AppSettings> {
             idleThresholdMinutes,
             activityTrackingEnabled,
             errorReportingEnabled,
+            updateChannel,
         ] = await Promise.all([
             getSetting(SETTING_KEYS.WIDGET_ACTIVATED),
             getSetting(SETTING_KEYS.TRAY_TIMER_ACTIVATED),
@@ -124,6 +142,7 @@ export async function getAppSettings(): Promise<AppSettings> {
             getSetting(SETTING_KEYS.IDLE_THRESHOLD_MINUTES),
             getSetting(SETTING_KEYS.ACTIVITY_TRACKING_ENABLED),
             getSetting(SETTING_KEYS.ERROR_REPORTING_ENABLED),
+            getSetting(SETTING_KEYS.UPDATE_CHANNEL),
         ])
 
         return {
@@ -151,6 +170,10 @@ export async function getAppSettings(): Promise<AppSettings> {
                 errorReportingEnabled !== null
                     ? errorReportingEnabled === 'true'
                     : DEFAULT_SETTINGS.errorReportingEnabled,
+            updateChannel:
+                updateChannel === 'stable' || updateChannel === 'beta'
+                    ? updateChannel
+                    : DEFAULT_SETTINGS.updateChannel,
         }
     } catch (error) {
         console.error('Failed to get app settings, using defaults:', error)
@@ -219,6 +242,10 @@ export async function updateAppSettings(
                     String(partialSettings.errorReportingEnabled)
                 )
             )
+        }
+
+        if (partialSettings.updateChannel !== undefined) {
+            promises.push(setSetting(SETTING_KEYS.UPDATE_CHANNEL, partialSettings.updateChannel))
         }
 
         await Promise.all(promises)

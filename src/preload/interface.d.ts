@@ -1,3 +1,5 @@
+export type UpdateChannel = 'stable' | 'beta'
+
 export interface AppSettings {
     widgetActivated: boolean
     trayTimerActivated: boolean
@@ -5,6 +7,7 @@ export interface AppSettings {
     idleThresholdMinutes: number
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
+    updateChannel: UpdateChannel
 }
 
 export interface WindowActivityStats {
@@ -52,6 +55,7 @@ export interface IElectronAPI {
     onResumeAfterBreak: (callback: () => void) => void
     updateTrayState: (timeEntry: string, showTimer: boolean) => void
     updateAutoUpdater: () => void
+    updateUpdateChannel: (channel: UpdateChannel) => Promise<{ success: boolean; error?: string }>
     updateIdleThreshold: (thresholdMinutes: number) => void
     updateIdleDetectionEnabled: (enabled: boolean) => void
     updateActivityTrackingEnabled: (enabled: boolean) => void
