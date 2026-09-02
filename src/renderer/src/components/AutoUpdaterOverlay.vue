@@ -36,7 +36,7 @@ function installUpdate() {
             >
             <PrimaryButton class="mt-4" :disabled="installingUpdate" @click="installUpdate">
                 <span v-if="installingUpdate" class="inline-flex items-center gap-2">
-                    <LoadingSpinner />
+                    <LoadingSpinner class="ml-0 mr-0 h-4 w-4 text-current" />
                     Applying update...
                 </span>
                 <span v-else>Restart & Update</span>
