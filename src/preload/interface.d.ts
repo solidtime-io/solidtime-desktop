@@ -8,6 +8,19 @@ export interface AppSettings {
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
     updateChannel: UpdateChannel
+    autoInstallUpdatesEnabled: boolean
+}
+
+export interface ReleaseInfo {
+    version: string
+    tag: string
+    prerelease: boolean
+    publishedAt: string
+}
+
+export interface DownloadedUpdate {
+    version?: string
+    installsAutomatically: boolean
 }
 
 export interface WindowActivityStats {
@@ -40,7 +53,12 @@ export interface IElectronAPI {
     showMiniWindow: () => void
     hideMiniWindow: () => void
     onUpdateAvailable: (callback: () => void) => void
-    onUpdateDownloaded: (callback: () => void) => void
+    onUpdateDownloaded: (callback: (update: DownloadedUpdate) => void) => void
+    updateAutoInstallUpdates: (
+        enabled: boolean
+    ) => Promise<{ success: boolean; appliesToCurrentUpdate: boolean; error?: string }>
+    listReleases: () => Promise<{ success: boolean; releases?: ReleaseInfo[]; error?: string }>
+    downloadVersion: (tag: string) => Promise<{ success: boolean; error?: string }>
     onUpdateNotAvailable: (callback: () => void) => void
     installUpdate: () => void
     startTimer: () => void

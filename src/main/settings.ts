@@ -15,6 +15,7 @@ export interface AppSettings {
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
     updateChannel: UpdateChannel
+    autoInstallUpdatesEnabled: boolean
 }
 
 /**
@@ -38,6 +39,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     activityTrackingEnabled: false, // Off by default for privacy
     errorReportingEnabled: false, // Off by default for privacy
     updateChannel: defaultUpdateChannel(),
+    autoInstallUpdatesEnabled: true,
 }
 
 // Setting keys used in the database
@@ -49,6 +51,7 @@ const SETTING_KEYS = {
     ACTIVITY_TRACKING_ENABLED: 'activity_tracking_enabled',
     ERROR_REPORTING_ENABLED: 'error_reporting_enabled',
     UPDATE_CHANNEL: 'update_channel',
+    AUTO_INSTALL_UPDATES_ENABLED: 'auto_install_updates_enabled',
 } as const
 
 /**
@@ -135,6 +138,7 @@ export async function getAppSettings(): Promise<AppSettings> {
             activityTrackingEnabled,
             errorReportingEnabled,
             updateChannel,
+            autoInstallUpdatesEnabled,
         ] = await Promise.all([
             getSetting(SETTING_KEYS.WIDGET_ACTIVATED),
             getSetting(SETTING_KEYS.TRAY_TIMER_ACTIVATED),
@@ -143,6 +147,7 @@ export async function getAppSettings(): Promise<AppSettings> {
             getSetting(SETTING_KEYS.ACTIVITY_TRACKING_ENABLED),
             getSetting(SETTING_KEYS.ERROR_REPORTING_ENABLED),
             getSetting(SETTING_KEYS.UPDATE_CHANNEL),
+            getSetting(SETTING_KEYS.AUTO_INSTALL_UPDATES_ENABLED),
         ])
 
         return {
@@ -174,6 +179,10 @@ export async function getAppSettings(): Promise<AppSettings> {
                 updateChannel === 'stable' || updateChannel === 'beta'
                     ? updateChannel
                     : DEFAULT_SETTINGS.updateChannel,
+            autoInstallUpdatesEnabled:
+                autoInstallUpdatesEnabled !== null
+                    ? autoInstallUpdatesEnabled === 'true'
+                    : DEFAULT_SETTINGS.autoInstallUpdatesEnabled,
         }
     } catch (error) {
         console.error('Failed to get app settings, using defaults:', error)
@@ -246,6 +255,15 @@ export async function updateAppSettings(
 
         if (partialSettings.updateChannel !== undefined) {
             promises.push(setSetting(SETTING_KEYS.UPDATE_CHANNEL, partialSettings.updateChannel))
+        }
+
+        if (partialSettings.autoInstallUpdatesEnabled !== undefined) {
+            promises.push(
+                setSetting(
+                    SETTING_KEYS.AUTO_INSTALL_UPDATES_ENABLED,
+                    String(partialSettings.autoInstallUpdatesEnabled)
+                )
+            )
         }
 
         await Promise.all(promises)

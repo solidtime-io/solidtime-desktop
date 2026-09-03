@@ -9,8 +9,8 @@ declare global {
     }
 }
 
-import AutoUpdaterOverlay from './components/AutoUpdaterOverlay.vue'
 import { useQueryClient, useQuery } from '@tanstack/vue-query'
+import { initializeAppUpdateState } from './utils/appUpdate.ts'
 
 import { onMounted, provide, ref, watchEffect, watch, computed } from 'vue'
 import { endpoint, initializeAuth, isLoggedIn, logout, openLoginWindow } from './utils/oauth.ts'
@@ -114,6 +114,8 @@ onMounted(async () => {
     // Initialize settings from database
     await initializeSettings()
 
+    initializeAppUpdateState()
+
     // Listen for timer events from mini window / tray
     await listenForBackendEvent('startTimer', () => {
         continueLastTimer()
@@ -192,7 +194,6 @@ async function retryMe() {
 </script>
 
 <template>
-    <AutoUpdaterOverlay></AutoUpdaterOverlay>
     <InstanceSettingsModal
         :show="showInstanceSettingsModal"
         @close="showInstanceSettingsModal = false"></InstanceSettingsModal>

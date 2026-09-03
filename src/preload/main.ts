@@ -28,7 +28,12 @@ if (process.contextIsolated || true) {
             showMainWindow: () => ipcRenderer.send('showMainWindow'),
             installUpdate: () => ipcRenderer.send('installUpdate'),
             onUpdateAvailable: (callback) => ipcRenderer.on('updateAvailable', () => callback()),
-            onUpdateDownloaded: (callback) => ipcRenderer.on('updateDownloaded', () => callback()),
+            onUpdateDownloaded: (callback) =>
+                ipcRenderer.on('updateDownloaded', (_event, update) => callback(update)),
+            updateAutoInstallUpdates: (enabled: boolean) =>
+                ipcRenderer.invoke('updateAutoInstallUpdates', enabled),
+            listReleases: () => ipcRenderer.invoke('listReleases'),
+            downloadVersion: (tag: string) => ipcRenderer.invoke('downloadVersion', tag),
             onUpdateNotAvailable: (callback) =>
                 ipcRenderer.on('updateNotAvailable', () => callback()),
             onAutoUpdaterError: (callback) =>

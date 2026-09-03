@@ -28,7 +28,9 @@ import {
     activityTrackingEnabled,
     errorReportingEnabled,
     updateChannel,
+    autoInstallUpdatesEnabled,
 } from '../utils/settings.ts'
+import { updateInstallsAutomatically, updateReady, updateVersion } from '../utils/appUpdate.ts'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe } from '../utils/me'
 import {
@@ -66,10 +68,21 @@ const appVersion = ref('')
 const showUpdateNotAvailable = ref(false)
 const checkingForUpdate = ref(false)
 const downloadingUpdate = ref(false)
-const updateReadyToInstall = ref(false)
 const showErrorOnUpdateRequest = ref(false)
 const showPermissionModal = ref(false)
 const showManualInstructionsModal = ref(false)
+
+const updateInstallMessage = computed(() =>
+    updateInstallsAutomatically.value
+        ? 'It installs automatically when you quit the app.'
+        : 'Automatic installation was off when this update downloaded. Use Restart & Update.'
+)
+
+const updatePreferenceChanged = computed(
+    () =>
+        updateInstallsAutomatically.value !== null &&
+        autoInstallUpdatesEnabled.value !== updateInstallsAutomatically.value
+)
 const showGrantPermissionButton = ref(false)
 const hasPermission = ref(false)
 const activityTrackingSupported = ref(true)
@@ -166,6 +179,53 @@ let checkingForUpdateTimeout: ReturnType<typeof setTimeout> | null = null
 
 function installUpdate() {
     window.electronAPI.installUpdate()
+}
+
+// Manual version selection (including downgrades)
+type ReleaseInfo = { version: string; tag: string; prerelease: boolean; publishedAt: string }
+const showVersionPicker = ref(false)
+const releases = ref<ReleaseInfo[]>([])
+const releasesError = ref('')
+const selectedReleaseTag = ref('')
+const downloadingVersion = ref(false)
+const availableReleases = computed(() =>
+    releases.value.filter(
+        (release) =>
+            release.version !== appVersion.value &&
+            (updateChannel.value === 'beta' || !release.prerelease)
+    )
+)
+
+watch(availableReleases, (available) => {
+    if (!available.some((release) => release.tag === selectedReleaseTag.value)) {
+        selectedReleaseTag.value = ''
+    }
+})
+
+async function openVersionPicker() {
+    showVersionPicker.value = true
+    if (releases.value.length > 0) return
+    releasesError.value = ''
+    const result = await window.electronAPI.listReleases()
+    if (result.success && result.releases) {
+        releases.value = result.releases
+    } else {
+        releasesError.value = result.error || 'Failed to load releases.'
+    }
+}
+
+async function downloadSelectedVersion() {
+    if (!selectedReleaseTag.value) return
+    downloadingVersion.value = true
+    releasesError.value = ''
+    const result = await window.electronAPI.downloadVersion(selectedReleaseTag.value)
+    downloadingVersion.value = false
+    if (!result.success) {
+        releasesError.value = result.error || 'Failed to download this version.'
+    } else {
+        // The downloaded version now shows in the Updates section.
+        showVersionPicker.value = false
+    }
 }
 
 function triggerUpdate() {
@@ -314,9 +374,10 @@ onMounted(async () => {
         checkingForUpdate.value = false
         downloadingUpdate.value = true
     })
+    // The shared appUpdate state flips updateReady; only the local
+    // downloading indicator is handled here.
     window.electronAPI.onUpdateDownloaded(() => {
         downloadingUpdate.value = false
-        updateReadyToInstall.value = true
     })
     window.electronAPI.onUpdateNotAvailable(() => {
         if (checkingForUpdateTimeout) clearTimeout(checkingForUpdateTimeout)
@@ -613,8 +674,19 @@ watch(activityTrackingEnabled, (enabled) => {
                         the newest stable release, which may be a downgrade.
                     </span>
                 </div>
+                <label class="mb-4 flex items-center">
+                    <Checkbox v-model:checked="autoInstallUpdatesEnabled" name="autoInstall" />
+                    <span class="ms-2 text-sm">Install updates automatically when quitting</span>
+                </label>
+                <div v-if="updateReady" class="mb-2 text-sm text-text-primary">
+                    Update{{ updateVersion ? ` ${updateVersion}` : '' }} ready —
+                    {{ updateInstallMessage }}
+                    <span v-if="updatePreferenceChanged" class="text-text-tertiary">
+                        Your new preference applies to future updates.
+                    </span>
+                </div>
                 <div class="flex items-center space-x-4">
-                    <PrimaryButton v-if="updateReadyToInstall" @click="installUpdate">
+                    <PrimaryButton v-if="updateReady" @click="installUpdate">
                         Restart & Update
                     </PrimaryButton>
                     <SecondaryButton
@@ -634,6 +706,11 @@ watch(activityTrackingEnabled, (enabled) => {
                             >There was an error while fetching the update.</span
                         >
                     </div>
+                    <button
+                        class="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                        @click="openVersionPicker">
+                        Other versions…
+                    </button>
                 </div>
             </div>
 
@@ -731,6 +808,49 @@ watch(activityTrackingEnabled, (enabled) => {
     </div>
 
     <!-- Screen Recording Permission Modal -->
+    <Modal
+        :show="showVersionPicker"
+        :maxWidth="'2xl'"
+        :closeable="!downloadingVersion"
+        @close="showVersionPicker = false">
+        <div class="px-6 py-4">
+            <div class="text-lg font-medium text-text-primary mb-4" role="heading">
+                Install another version
+            </div>
+            <div class="text-sm text-muted-foreground mb-4">
+                Installs the selected version, including older ones. Downgrading may cause issues
+                with data created by newer versions.
+            </div>
+            <Select v-model="selectedReleaseTag">
+                <SelectTrigger class="w-56">
+                    <SelectValue placeholder="Select a version" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="release in availableReleases"
+                        :key="release.tag"
+                        :value="release.tag">
+                        {{ release.version }}{{ release.prerelease ? ' (beta)' : '' }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+            <div v-if="releasesError" class="mt-3 text-xs text-red-400">{{ releasesError }}</div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <SecondaryButton :disabled="downloadingVersion" @click="showVersionPicker = false">
+                    Cancel
+                </SecondaryButton>
+                <PrimaryButton
+                    :disabled="!selectedReleaseTag || downloadingVersion"
+                    @click="downloadSelectedVersion">
+                    <div class="flex items-center">
+                        <LoadingSpinner v-if="downloadingVersion"></LoadingSpinner>
+                        <span>{{ downloadingVersion ? 'Downloading...' : 'Download' }}</span>
+                    </div>
+                </PrimaryButton>
+            </div>
+        </div>
+    </Modal>
+
     <Modal :show="showPermissionModal" :maxWidth="'2xl'" :closeable="false">
         <div class="px-6 py-4">
             <div class="text-lg font-medium text-text-primary mb-4" role="heading">

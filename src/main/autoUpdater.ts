@@ -2,10 +2,41 @@ import { ipcMain, app, autoUpdater as nativeAutoUpdater } from 'electron'
 import type { AppUpdater } from 'electron-updater'
 import electronUpdater from 'electron-updater'
 import log from 'electron-log'
+import { readFileSync } from 'fs'
+import path from 'path'
 import { getAppSettings, type UpdateChannel } from './settings'
 
 let updaterLifecycleLoggingRegistered = false
 let channelSettingApplied: Promise<void> = Promise.resolve()
+let readyUpdateAutoInstalls: boolean | null = null
+
+const GITHUB_OWNER = 'solidtime-io'
+const GITHUB_REPO = 'solidtime-desktop'
+
+export interface ReleaseInfo {
+    version: string
+    tag: string
+    prerelease: boolean
+    publishedAt: string
+}
+
+/**
+ * The packaged app-update.yml pins a per-arch yml channel (latest-arm64 etc.).
+ * setFeedURL overrides that disk config for the session, so the downgrade
+ * feature must carry the channel through pin and restore or an x64 build
+ * would pick the arm64 file from the merged yml.
+ */
+function getConfiguredYmlChannel(): string | undefined {
+    try {
+        const configPath = app.isPackaged
+            ? path.join(process.resourcesPath, 'app-update.yml')
+            : path.join(app.getAppPath(), 'dev-app-update.yml')
+        const match = readFileSync(configPath, 'utf8').match(/^channel:\s*(.+)$/m)
+        return match?.[1]?.trim()
+    } catch {
+        return undefined
+    }
+}
 
 export function getAutoUpdater(): AppUpdater {
     // Using destructuring to access autoUpdater due to the CommonJS module of 'electron-updater'.
@@ -34,13 +65,20 @@ export function initializeAutoUpdater() {
 
     const updater = getAutoUpdater()
     updater.autoDownload = true
-    updater.autoInstallOnAppQuit = false
+    // Updates install automatically when the app quits unless the user turned
+    // the setting off. The OS-shutdown handlers still call
+    // disableInstallOnQuit() so an installer is never spawned during shutdown.
+    updater.autoInstallOnAppQuit = true
     updater.allowDowngrade = true
+    readyUpdateAutoInstalls = null
 
     channelSettingApplied = getAppSettings()
-        .then((settings) => applyUpdateChannel(settings.updateChannel))
+        .then((settings) => {
+            applyUpdateChannel(settings.updateChannel)
+            updater.autoInstallOnAppQuit = settings.autoInstallUpdatesEnabled
+        })
         .catch((error) => {
-            log.error(`[updater] failed to load update channel setting: ${String(error)}`)
+            log.error(`[updater] failed to load updater settings: ${String(error)}`)
         })
 
     ipcMain.handle('updateUpdateChannel', (_event, channel: UpdateChannel) => {
@@ -53,6 +91,81 @@ export function initializeAutoUpdater() {
             log.error(`[updater] checkForUpdatesAndNotify after channel switch: ${message}`)
         })
         return { success: true }
+    })
+
+    // Persisted by the renderer via updateSettings; this applies it live.
+    ipcMain.handle('updateAutoInstallUpdates', (_event, enabled: boolean) => {
+        const appliesToCurrentUpdate = readyUpdateAutoInstalls === null
+        if (appliesToCurrentUpdate) {
+            updater.autoInstallOnAppQuit = enabled === true
+        }
+        log.info(
+            `[updater] install on quit ${enabled ? 'enabled' : 'disabled'} for ${
+                appliesToCurrentUpdate ? 'the current and future updates' : 'future updates'
+            }`
+        )
+        return { success: true, appliesToCurrentUpdate }
+    })
+
+    ipcMain.handle('listReleases', async () => {
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases?per_page=100`,
+                { headers: { Accept: 'application/vnd.github+json' } }
+            )
+            if (!response.ok) {
+                return { success: false, error: `GitHub API responded with ${response.status}` }
+            }
+            const releases = (await response.json()) as Array<{
+                tag_name: string
+                prerelease: boolean
+                draft: boolean
+                published_at: string
+            }>
+            const list: ReleaseInfo[] = releases
+                .filter((release) => !release.draft)
+                .map((release) => ({
+                    version: release.tag_name.replace(/^v/, ''),
+                    tag: release.tag_name,
+                    prerelease: release.prerelease,
+                    publishedAt: release.published_at,
+                }))
+            return { success: true, releases: list }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            log.error(`[updater] listReleases failed: ${message}`)
+            return { success: false, error: message }
+        }
+    })
+
+    ipcMain.handle('downloadVersion', async (_event, tag: string) => {
+        if (typeof tag !== 'string' || !/^v?[\w.-]+$/.test(tag)) {
+            return { success: false, error: `Invalid tag: ${String(tag)}` }
+        }
+        log.info(`[updater] pinning feed to release ${tag} for manual (down)grade`)
+        const ymlChannel = getConfiguredYmlChannel()
+        if (ymlChannel) {
+            updater.channel = ymlChannel
+        }
+        updater.setFeedURL({
+            provider: 'generic',
+            url: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}`,
+        })
+        try {
+            const result = await updater.checkForUpdatesAndNotify()
+            await result?.downloadPromise
+            return { success: true }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            log.error(`[updater] downloadVersion(${tag}) failed: ${message}`)
+            return { success: false, error: message }
+        } finally {
+            updater.setFeedURL({
+                provider: 'github',
+                owner: GITHUB_OWNER,
+                repo: GITHUB_REPO,
+            })
+        }
     })
 
     log.info(
@@ -82,8 +195,14 @@ export function registerAutoUpdateListeners(mainWindow: Electron.BrowserWindow) 
     })
 
     updater.addListener('update-downloaded', (info) => {
-        log.info(`[updater] update-downloaded (version=${info.version})`)
-        mainWindow.webContents.send('updateDownloaded')
+        readyUpdateAutoInstalls = updater.autoInstallOnAppQuit
+        log.info(
+            `[updater] update-downloaded (version=${info.version}, autoInstallOnAppQuit=${readyUpdateAutoInstalls})`
+        )
+        mainWindow.webContents.send('updateDownloaded', {
+            version: info.version,
+            installsAutomatically: readyUpdateAutoInstalls,
+        })
     })
 
     updater.addListener('error', (error) => {

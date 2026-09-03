@@ -10,6 +10,7 @@ export interface AppSettings {
     activityTrackingEnabled: boolean
     errorReportingEnabled: boolean
     updateChannel: UpdateChannel
+    autoInstallUpdatesEnabled: boolean
 }
 
 // Reactive settings that sync with the database
@@ -20,6 +21,7 @@ export const idleThresholdMinutes = ref(5)
 export const activityTrackingEnabled = ref(false) // Off by default
 export const errorReportingEnabled = ref(false) // Off by default
 export const updateChannel = ref<UpdateChannel>('stable')
+export const autoInstallUpdatesEnabled = ref(true)
 
 let isInitialized = false
 
@@ -39,6 +41,7 @@ export async function initializeSettings() {
             activityTrackingEnabled.value = result.data.activityTrackingEnabled
             errorReportingEnabled.value = result.data.errorReportingEnabled
             updateChannel.value = result.data.updateChannel
+            autoInstallUpdatesEnabled.value = result.data.autoInstallUpdatesEnabled
         }
 
         isInitialized = true
@@ -76,6 +79,12 @@ export async function initializeSettings() {
             updateSetting({ updateChannel: value })
             // Also notify main so the updater switches channel immediately
             window.electronAPI.updateUpdateChannel(value)
+        })
+
+        watch(autoInstallUpdatesEnabled, (value) => {
+            updateSetting({ autoInstallUpdatesEnabled: value })
+            // Also notify main so install-on-quit is applied immediately
+            window.electronAPI.updateAutoInstallUpdates(value)
         })
     } catch (error) {
         console.error('Failed to initialize settings:', error)
