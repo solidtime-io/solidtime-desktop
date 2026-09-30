@@ -31,6 +31,7 @@ Additionally you can install the app via
 ## Self-Hosted Setup Instructions
 
 If you are using a self-hosted instance you have to make sure to enable the Desktop client access: [Guide](https://docs.solidtime.io/self-hosting/guides/docker#9-activate-desktop-client-access-optional)
+
 For [solidtime Cloud](http://app.solidtime.io/) users this is already configured, no additional step needed. 
 
 ## Development Setup
