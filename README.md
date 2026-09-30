@@ -28,6 +28,11 @@ Additionally you can install the app via
   <img alt="Get it from the Snap Store" src="https://snapcraft.io/static/images/badges/en/snap-store-white.svg" />
 </a>
 
+## Self-Hosted Setup Instructions
+
+If you are using a self-hosted instance you have to make sure to enable the Desktop client access: [Guide](https://docs.solidtime.io/self-hosting/guides/docker#9-activate-desktop-client-access-optional)
+For [solidtime Cloud](http://app.solidtime.io/) users this is already configured, no additional step needed. 
+
 ## Development Setup
 
 **We do not accept any external contributions at the moment as this project is still in an early stage.**
